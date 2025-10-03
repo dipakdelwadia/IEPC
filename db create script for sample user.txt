@@ -1,0 +1,147 @@
+CREATE PROCEDURE GetUserByUserName
+    @Username NVARCHAR(MAX)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT ClientID, UserID, Password
+    FROM [dbo].clientuser
+    WHERE UserID = @Username and UserStatus=1
+END;
+GO
+--------------------------------------------------------------
+CREATE FUNCTION parseJSON (@JSON NVARCHAR(MAX))
+RETURNS @Result TABLE
+(
+    element_id INT,
+    sequenceNo INT,
+    parent_ID INT,
+    Object_ID INT,
+    Name VARCHAR(MAX),
+    StringValue VARCHAR(MAX),
+    ValueType VARCHAR(45)
+)
+AS
+BEGIN
+    -- This is a basic parser using OPENJSON (SQL Server 2016+)
+    -- Adjust hierarchy logic if needed
+
+    DECLARE @Sequence INT = 0;
+
+    INSERT INTO @Result (element_id, sequenceNo, parent_ID, Object_ID, Name, StringValue, ValueType)
+    SELECT
+        ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS element_id,
+        ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS sequenceNo,
+        1 AS parent_ID,
+        NULL AS Object_ID,
+        [key] AS Name,
+        [value] AS StringValue,
+        [type] AS ValueType
+    FROM OPENJSON(@JSON);
+
+    RETURN;
+END;
+GO
+
+------------------------------------------------------------------------------------------------
+
+create PROCEDURE [dbo].[SP_GetReport] 
+	@REPORTNAME nvarchar(100) = null, 
+	@JSON varchar(MAX) = null
+
+AS
+BEGIN
+	-- SET NOCOUNT ON added to prevent extra result sets from
+	-- interfering with SELECT statements.
+	SET NOCOUNT ON;
+	
+	-- @debug is a flag to determin if the sql statement should be displayed to the user. We default to FALSE.
+	DECLARE @debug as int = 0
+	
+	-- We use a TRY / CATCH to handle unexpected errors. See Catch section for logging.
+	BEGIN TRY
+		
+		if @JSON is NULL OR @JSON = ''
+		BEGIN
+			select '3' as ErrorID, 'Invalid JSON Input' as ErrorName, 'You have passed in an empty JSON Input Parameter' As ErrorMessage
+			set noexec on 
+		END	
+
+		-- Create temp Parameter Table to store JSON parameters
+		DECLARE @MyParams TABLE(element_id int, sequenceNo int, parent_ID int, Object_ID int, Name varchar(MAX), StringValue varchar(MAX), ValueType varchar(45))
+
+		-- Parse JSON input parameter and store in temp table
+		INSERT INTO @MyParams
+		select * from parseJSON(@JSON)
+		
+		-- Get the parent ID of the root elements
+		DECLARE @Root as Int = (Select MAX(parent_ID) from @MyParams)
+			
+		/*=================================================================================
+		  Manage parameters
+		===================================================================================*/
+		
+		-- Convert all required parameters into variables
+		--declare @Operation varchar(35) = (select StringValue from @MyParams where Name = 'Operation' AND parent_ID = @Root AND ltrim(rtrim(StringValue)) <> ''),
+		--		@MyAssetTransactionID bigint = (select StringValue from @MyParams where (Name = 'MyCertificateTransactionID' OR Name = 'MyAssetTransactionID') AND parent_ID = @Root AND ltrim(rtrim(StringValue)) <> ''),
+		--		@MyAssetTransactionIDs varchar(max) = (select StringValue from @MyParams where (Name = 'MyAssetTransactionIDs') AND parent_ID = @Root AND ltrim(rtrim(StringValue)) <> ''),
+		--		@Balance money = (select StringValue from @MyParams where Name = 'Balance' AND parent_ID = @Root AND ltrim(rtrim(StringValue)) <> ''),
+		--		@IsValid bit = (select StringValue from @MyParams where Name = 'IsValid' AND parent_ID = @Root AND ltrim(rtrim(StringValue)) <> ''),
+		--		@InvoiceDate date = (select StringValue from @MyParams where Name = 'InvoiceDate' AND parent_ID = @Root AND ltrim(rtrim(StringValue)) <> ''),
+		--		@Amount FLOAT = (select StringValue from @MyParams where Name = 'Amount' AND parent_ID = @Root AND ltrim(rtrim(StringValue)) <> ''),
+		--		@FaceAmountMin decimal(15,2) = (select StringValue from @MyParams where Name = 'FaceAmountMin' AND parent_ID = @Root AND ltrim(rtrim(StringValue)) <> '')
+		
+		declare @FromDate date = (select StringValue from @MyParams where Name = 'FromDate' AND parent_ID = @Root AND ltrim(rtrim(StringValue)) <> ''),
+				@Todate date = (select StringValue from @MyParams where Name = 'Todate' AND parent_ID = @Root AND ltrim(rtrim(StringValue)) <> ''),
+				@Type varchar(100) = (select StringValue from @MyParams where Name = 'Type' AND parent_ID = @Root AND ltrim(rtrim(StringValue)) <> ''),
+				@FromNumber bigint = (select StringValue from @MyParams where (Name = 'FromNumber') AND parent_ID = @Root AND ltrim(rtrim(StringValue)) <> ''),
+				@ToNumber bigint = (select StringValue from @MyParams where (Name = 'ToNumber') AND parent_ID = @Root AND ltrim(rtrim(StringValue)) <> ''),
+				@UserName varchar(100) = (select StringValue from @MyParams where Name = 'UserName' AND parent_ID = @Root AND ltrim(rtrim(StringValue)) <> ''),
+				@ClientId varchar(100) = (select StringValue from @MyParams where Name = 'ClientId' AND parent_ID = @Root AND ltrim(rtrim(StringValue)) <> ''),
+				@FormCode varchar(100) = (select StringValue from @MyParams where Name = 'FormCode' AND parent_ID = @Root AND ltrim(rtrim(StringValue)) <> ''),
+				@Id bigint = (select StringValue from @MyParams where (Name = 'Id') AND parent_ID = @Root AND ltrim(rtrim(StringValue)) <> '')
+
+				
+
+		SET @debug = (select StringValue from @MyParams where Name = 'debug' AND parent_ID = @Root AND ltrim(rtrim(StringValue)) <> '')
+	
+		if @REPORTNAME = 'PV Audit Report'
+		begin
+			exec SP_IEPCAssetCMLAlgoParentChild_V4 
+			@type = @Type, 
+			@fdate = @FromDate, 
+			@tdate = @Todate,  
+			@FromNumber = 1,  
+			@ToNumber = 10,  
+			@SQLSortString = '',  
+			@SQLFilterString = '',
+			@username=@UserName,
+			@clientId=@ClientId,
+			@FormCode=@FormCode,
+			@value8='',
+			@Id=@Id,
+			@IsRefresh=0
+			set noexec on;
+		end
+	END TRY
+
+	/*=================================================================================
+	  Error Catch Section
+	===================================================================================*/
+	BEGIN CATCH
+	
+		---- Insert this error into the APIErrorLog API
+		--INSERT INTO APIErrorLog (UserID, SessionID, ProcedureName, ErrorNumber, ErrorLine, ErrorMessage, ErrorSeverity, ErrorState)
+		--VALUES (@_UserID, @SessionId, OBJECT_NAME(@@PROCID), ERROR_NUMBER(), ERROR_LINE(), ERROR_MESSAGE(), ERROR_SEVERITY(), ERROR_STATE())
+		
+		---- If debug is set to true and the user is a super admin, display the error message
+		---- Otherwise display a generic error message
+		--IF @debug = 1
+		--	SELECT ERROR_NUMBER() as ErrorID, ERROR_LINE() AS ErrorName, ERROR_MESSAGE() AS ErrorMessage
+		--Else
+		--	EXEC Display_API_Error '', ''
+			
+	END CATCH
+	
+	
+END
