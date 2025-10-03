@@ -13,9 +13,9 @@ namespace WebAPI.RequestResponse
         [Required]
         public string TableName { get; set; } = "";
 
-        public string? PageSize { get; set; } = null;
+        //public string? PageSize { get; set; } = null;
        
-        public string? PageNo { get; set; } = null;
+        //public string? PageNo { get; set; } = null;
 
     }
 }

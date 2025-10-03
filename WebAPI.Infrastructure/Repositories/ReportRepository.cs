@@ -36,8 +36,8 @@ namespace WebAPI.Infrastructure.Repositories
                 {
                     ClientId = request.ClientId,
                     TableName = request.TableName,
-                    PageSize = request.PageSize,
-                    PageNo = request.PageNo
+                    PageSize = "",
+                    PageNo = ""
                 });
 
                 string json = JsonConvert.SerializeObject(dt);
