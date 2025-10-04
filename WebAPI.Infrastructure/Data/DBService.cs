@@ -22,35 +22,35 @@ namespace WebAPI.Infrastructure.Repositories
                 .GetValue(parameters)?
                 .ToString() ?? string.Empty;
 
-            string connectionStringKey;
+            string connectionStringKey = "ConnectionStrings:DefaultConnection";
 
-            switch (clientId)
-            {
-                case "CERS":
-                    connectionStringKey = "ConnectionStrings:CERS";
-                    break;
-                case "HFSI":
-                    connectionStringKey = "ConnectionStrings:HFSI";
-                    break;
-                case "CRTN":
-                    connectionStringKey = "ConnectionStrings:CRTN";
-                    break;
-                case "MTDR":
-                    connectionStringKey = "ConnectionStrings:MTDR";
-                    break;
-                case "SMIT":
-                    connectionStringKey = "ConnectionStrings:SMIT";
-                    break;
-                case "PDCE":
-                    connectionStringKey = "ConnectionStrings:PDCE";
-                    break;
-                case "FUJI":
-                    connectionStringKey = "ConnectionStrings:FUJI";
-                    break;
-                default:
-                    connectionStringKey = "ConnectionStrings:DefaultConnection";
-                    break;
-            }
+            //switch (clientId)
+            //{
+            //    case "CERS":
+            //        connectionStringKey = "ConnectionStrings:CERS";
+            //        break;
+            //    case "HFSI":
+            //        connectionStringKey = "ConnectionStrings:HFSI";
+            //        break;
+            //    case "CRTN":
+            //        connectionStringKey = "ConnectionStrings:CRTN";
+            //        break;
+            //    case "MTDR":
+            //        connectionStringKey = "ConnectionStrings:MTDR";
+            //        break;
+            //    case "SMIT":
+            //        connectionStringKey = "ConnectionStrings:SMIT";
+            //        break;
+            //    case "PDCE":
+            //        connectionStringKey = "ConnectionStrings:PDCE";
+            //        break;
+            //    case "FUJI":
+            //        connectionStringKey = "ConnectionStrings:FUJI";
+            //        break;
+            //    default:
+            //        connectionStringKey = "ConnectionStrings:DefaultConnection";
+            //        break;
+            //}
 
             using (var connection = new SqlConnection(_configuration[connectionStringKey]))
             using (var cmd = new SqlCommand(spName, connection))
