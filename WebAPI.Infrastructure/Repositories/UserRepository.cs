@@ -30,7 +30,7 @@ namespace WebAPI.Infrastructure.Repositories
 
             //return _context.Users.FirstOrDefault(u => u.Username == username);
         }
-        public async Task<User?> GetByUsername(string username, string clientId)
+        public async Task<User?> GetByUsername(string username, string clientId = null)
         {
             var dt = await _dbService.ExecuteStoredProcedureAsync("GetUserByUserName", new
             {

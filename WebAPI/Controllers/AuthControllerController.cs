@@ -25,7 +25,7 @@ namespace WebAPI.Api.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
-            var user = await _userRepository.GetByUsername(request.Username, request.ClientId);
+            var user = await _userRepository.GetByUsername(request.Username);
             if (user == null || !VerifyPassword(request.Password, user.Password))
             {
                 return Unauthorized();
@@ -44,8 +44,8 @@ namespace WebAPI.Api.Controllers
 
     public class LoginRequest
     {
-        [Required]
-        public string ClientId { get; set; } = string.Empty;
+        //[Required]
+        //public string ClientId { get; set; } = string.Empty;
         [Required]
         public string Username { get; set; } = string.Empty;
         [Required]

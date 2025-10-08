@@ -32,7 +32,7 @@ namespace WebAPI.Infrastructure.Repositories
 
             try
             {
-                var dt = await _dbService.ExecuteStoredProcedureAsync("SP_GetReportByTableName", new
+                var dt = await _dbService.ExecuteStoredProcedureAsyncWithClientId("SP_GetReportByTableName", new
                 {
                     ClientId = request.ClientId,
                     TableName = request.TableName,
