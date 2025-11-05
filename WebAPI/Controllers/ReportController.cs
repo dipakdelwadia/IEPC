@@ -26,6 +26,12 @@ namespace WebAPI.Controllers
             return Ok(result);
         }
 
+        [HttpPost("GetReport")]
+        public async Task<IActionResult> GetReport([FromBody] ReportRequests request)
+        {
+            var result = await _reportRepository.GetReportData(request);
+            return Ok(result);
+        }
 
     }
 }

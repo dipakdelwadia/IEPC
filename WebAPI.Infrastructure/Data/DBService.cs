@@ -149,5 +149,32 @@ namespace WebAPI.Infrastructure.Repositories
                 return ds;
             }
         }
+
+        public async Task<DataSet> ExecuteRawSqlWithClientId(string sqlText, string clientId)
+        {
+            string connectionStringKey = clientId switch
+            {
+                "CERS" => "ConnectionStrings:CERS",
+                "HFSI" => "ConnectionStrings:HFSI",
+                "CRTN" => "ConnectionStrings:CRTN",
+                "MTDR" => "ConnectionStrings:MTDR",
+                "SMIT" => "ConnectionStrings:SMIT",
+                "PDCE" => "ConnectionStrings:PDCE",
+                "FUJI" => "ConnectionStrings:FUJI",
+                _ => "ConnectionStrings:DefaultConnection"
+            };
+
+            using var connection = new SqlConnection(_configuration[connectionStringKey]);
+            using var cmd = new SqlCommand(sqlText, connection);
+            using var adapter = new SqlDataAdapter(cmd);
+
+            cmd.CommandType = CommandType.Text;
+
+            var ds = new DataSet();
+            await connection.OpenAsync();
+            adapter.Fill(ds);
+            return ds;
+        }
+
     }
 }
