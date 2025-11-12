@@ -1,4 +1,4 @@
-﻿using Azure;
+using Azure;
 using Dapper;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -62,9 +62,13 @@ namespace WebAPI.Infrastructure.Repositories
 
             try
             {
-                string sqlText = _reportSqlMapping[request.ReportName];
+                string clientId = "IEPC-SMIT"; //request.ClientId;
+                string username = "IEPC-SMIT@indoglobus.com";
+                string formCode = GetFormCodeByReportName(request.ReportName);
 
-                var ds = await _dbService.ExecuteRawSqlWithClientId(sqlText, request.ClientId);
+                string sqlText = _reportSqlMapping[request.ReportName](clientId, username, formCode);
+
+                var ds = await _dbService.ExecuteRawSqlWithClientId(sqlText, clientId);
 
                 string json = JsonConvert.SerializeObject(ds);
                 response.Status = "Success";
@@ -80,55 +84,46 @@ namespace WebAPI.Infrastructure.Repositories
             return response;
         }
 
-        private readonly Dictionary<string, string> _reportSqlMapping = new()
+        private readonly Dictionary<string, Func<string, string, string, string>> _reportSqlMapping = new()
         {
             //Dashboard -------------------------------------------------------------
 
-            { "Inspection Planning",
-                @"exec SP_FormDataIEPCMultiChart_v1 
+             { "Inspection Planning", (clientId, username, formCode) =>
+                $@"exec SP_FormDataIEPCMultiChart_v1 
                 @type = 1001,
                 @year = 2025,
                 @isOldcount = 1,
-                @username = 'IEPC-SMIT@indoglobus.com',
-                @clientId='IEPC-SMIT',
-                @IsRefresh=0"
+                @username = '{username}',
+                @clientId = '{clientId}',
+                @IsRefresh = 0"
             },
 
             //Maps -------------------------------------------------------------
 
-            { "Facility Map",
-                @"exec Sp_FormdataIEPCFacilityMap 
-                'IEPC-SMIT@indoglobus.com', 
-                'IEPC-SMIT'"
+            { "Facility Map", (clientId, username, formCode) =>
+                $@"exec Sp_FormdataIEPCFacilityMap '{username}', '{clientId}'"
             },
 
-            { "PV Asset Map",
-                @"exec SP_FormDataIEPCAssetMap_v5 
-                'IEPC-SMIT@indoglobus.com', 
-                'IEPC-SMIT'"
+            { "PV Asset Map", (clientId, username, formCode) =>
+                $@"exec SP_FormDataIEPCAssetMap_v5 '{username}', '{clientId}'"
             },
 
-            { "PP Asset Map",
-                @"exec SP_FormDataIEPCPPAssetMap 
-                'IEPC-SMIT@indoglobus.com', 
-                'IEPC-SMIT'"
+            { "PP Asset Map", (clientId, username, formCode) =>
+                $@"exec SP_FormDataIEPCPPAssetMap '{username}', '{clientId}'"
             },
 
-            { "TK Asset Map",
-                @"exec SP_FormDataIEPCTKAssetMap 
-                'IEPC-SMIT@indoglobus.com', 
-                'IEPC-SMIT'"
+            { "TK Asset Map", (clientId, username, formCode) =>
+                $@"exec SP_FormDataIEPCTKAssetMap '{username}', '{clientId}'"
             },
 
-            { "PRD Asset Map",
-                @"exec SP_FormDataIEPCPRDAssetMap 
-                'IEPC-SMIT@indoglobus.com', 
-                'IEPC-SMIT'"
+            { "PRD Asset Map", (clientId, username, formCode) =>
+                $@"exec SP_FormDataIEPCPRDAssetMap '{username}', '{clientId}'"
             },
 
             // Audit Reports -------------------------------------------------------------
             { "PV Audit Report",
-                @"exec dbo.SP_IEPCAssetCMLAlgoParentChild_V4 
+                (clientId, username, formCode) => $@"
+                exec dbo.SP_IEPCAssetCMLAlgoParentChild_V4 
                 @type = 'Select', 
                 @fdate = null, 
                 @tdate = null, 
@@ -136,16 +131,17 @@ namespace WebAPI.Infrastructure.Repositories
                 @ToNumber = 100000,  
                 @SQLSortString = '', 
                 @SQLFilterString = '',
-                @username='IEPC-SMIT@indoglobus.com',
-                @clientId='IEPC-SMIT',
-                @FormCode='IEPC-PVINVEAL',
-                @value8='',
-                @Id='',
-                @IsRefresh=0"
+                @username = '{username}',
+                @clientId = '{clientId}',
+                @FormCode = '{formCode}',
+                @value8 = '',
+                @Id = '',
+                @IsRefresh = 0"
             },
 
             { "PV CML Audit Report",
-                @"exec dbo.SP_IEPCCMLTableAlgorithm_v4 
+                (clientId, username, formCode) => $@"
+                exec dbo.SP_IEPCCMLTableAlgorithm_v4 
                 @type = 'selectForGrid',
                 @fdate = null,
                 @tdate = null,
@@ -153,28 +149,31 @@ namespace WebAPI.Infrastructure.Repositories
                 @ToNumber = 100000,
                 @SQLSortString = '',
                 @SQLFilterString = '',
-                @clientId='IEPC-SMIT',
-                @username='IEPC-SMIT@indoglobus.com',
-                @FormCode='IEPC-PVINVEAL',
-                @IsRefresh=0"
+                @clientId = '{clientId}',
+                @username = '{username}',
+                @FormCode = '{formCode}',
+                @IsRefresh = 0"
             },
 
             { "PV Scheduler Report",
-                @"exec dbo.SP_IEPCPVSchedulerReport_v4 
+                (clientId, username, formCode) => $@"
+                exec dbo.SP_IEPCPVSchedulerReport_v4 
                 @type = 'selectForGrid',
                 @fdate = null,
                 @tdate = null,
                 @FromNumber = 1,
                 @ToNumber = 100000,
                 @SQLSortString = '',
-                @SQLFilterString = '' ,
-                @clientId='IEPC-SMIT',
-                @username='IEPC-SMIT@indoglobus.com',
-                @FormCode='IEPC-PVINVEAL',@IsRefresh=0"
+                @SQLFilterString = '',
+                @clientId = '{clientId}',
+                @username = '{username}',
+                @FormCode = '{formCode}',
+                @IsRefresh = 0"
             },
 
             { "PV Findings Report",
-                @"exec dbo.Sp_IEPCPVNotesAndFindingAuditReport_v4 
+                (clientId, username, formCode) => $@"
+                exec dbo.Sp_IEPCPVNotesAndFindingAuditReport_v4 
                 @type = 'selectForGrid', 
                 @fdate = null, 
                 @tdate = null,  
@@ -182,14 +181,15 @@ namespace WebAPI.Infrastructure.Repositories
                 @ToNumber = 100000,  
                 @SQLSortString = '',  
                 @SQLFilterString = '',
-                @clientId = 'IEPC-SMIT',
-                @useremail = 'IEPC-SMIT@indoglobus.com',
-                @FormCode = 'IEPC-PVINVEAL',
+                @clientId = '{clientId}',
+                @useremail = '{username}',
+                @FormCode = '{formCode}',
                 @IsRefresh = 1"
             },
 
             { "PP Audit Report",
-                @"exec dbo.SP_IEPCPPAuditReport_v4 
+                (clientId, username, formCode) => $@"
+                exec dbo.SP_IEPCPPAuditReport_v4 
                 @type = 'selectForGrid', 
                 @fdate = null, 
                 @tdate = null,  
@@ -197,16 +197,17 @@ namespace WebAPI.Infrastructure.Repositories
                 @ToNumber = 100000,  
                 @SQLSortString = '',  
                 @SQLFilterString = '',
-                @clientId = 'IEPC-SMIT',
-                @username = 'IEPC-SMIT@indoglobus.com',
-                @FormCode = 'IEPC-PPINVEAL',
+                @clientId = '{clientId}',
+                @username = '{username}',
+                @FormCode = '{formCode}',
                 @value8 = '',
                 @Id = '',
                 @IsRefresh = 0"
             },
 
             { "PP CML Audit Report",
-                @"exec dbo.SP_IEPCPPCMLAuditReport_v4 
+                (clientId, username, formCode) => $@"
+                exec dbo.SP_IEPCPPCMLAuditReport_v4 
                 @type = 'selectForGrid', 
                 @fdate = null, 
                 @tdate = null,  
@@ -214,14 +215,15 @@ namespace WebAPI.Infrastructure.Repositories
                 @ToNumber = 100000,  
                 @SQLSortString = '',  
                 @SQLFilterString = '',
-                @clientId = 'IEPC-SMIT',
-                @username = 'IEPC-SMIT@indoglobus.com',
-                @FormCode = 'IEPC-PPINVEAL',
+                @clientId = '{clientId}',
+                @username = '{username}',
+                @FormCode = '{formCode}',
                 @IsRefresh = 0"
             },
 
             { "PP Scheduler Report",
-                @"exec dbo.SP_IEPCPPSchedulerReport_v4 
+                (clientId, username, formCode) => $@"
+                exec dbo.SP_IEPCPPSchedulerReport_v4 
                 @type = 'selectForGrid', 
                 @fdate = null, 
                 @tdate = null,  
@@ -229,14 +231,15 @@ namespace WebAPI.Infrastructure.Repositories
                 @ToNumber = 100000,  
                 @SQLSortString = '',  
                 @SQLFilterString = '',
-                @clientId = 'IEPC-SMIT',
-                @username = 'IEPC-SMIT@indoglobus.com',
-                @FormCode = 'IEPC-PPINVEAL',
+                @clientId = '{clientId}',
+                @username = '{username}',
+                @FormCode = '{formCode}',
                 @IsRefresh = 0"
             },
 
             { "PP Findings Report",
-                @"exec dbo.Sp_IEPCPPNotesAndFindingAuditReport_v4 
+                (clientId, username, formCode) => $@"
+                exec dbo.Sp_IEPCPPNotesAndFindingAuditReport_v4 
                 @type = 'selectForGrid', 
                 @fdate = null, 
                 @tdate = null,  
@@ -244,14 +247,15 @@ namespace WebAPI.Infrastructure.Repositories
                 @ToNumber = 100000,  
                 @SQLSortString = '',  
                 @SQLFilterString = '',
-                @clientId = 'IEPC-SMIT',
-                @useremail = 'IEPC-SMIT@indoglobus.com',
-                @FormCode = 'IEPC-PPINVEAL',
+                @clientId = '{clientId}',
+                @useremail = '{username}',
+                @FormCode = '{formCode}',
                 @IsRefresh = 0"
             },
 
             { "TK Audit Report",
-                @"exec dbo.SP_IEPCTKAuditReport_v4 
+                (clientId, username, formCode) => $@"
+                exec dbo.SP_IEPCTKAuditReport_v4 
                 @type = 'selectForGrid', 
                 @fdate = null, 
                 @tdate = null,  
@@ -259,16 +263,17 @@ namespace WebAPI.Infrastructure.Repositories
                 @ToNumber = 100000,  
                 @SQLSortString = '',  
                 @SQLFilterString = '',
-                @clientId = 'IEPC-SMIT',
-                @username = 'IEPC-SMIT@indoglobus.com',
-                @FormCode = 'IEPC-TKINVEAL',
+                @clientId = '{clientId}',
+                @username = '{username}',
+                @FormCode = '{formCode}',
                 @value8 = '',
                 @Id = '',
                 @IsRefresh = 0"
             },
 
             { "TK CML Audit Report",
-                @"exec dbo.SP_IEPCTKCMLAlgorithm_v4 
+                (clientId, username, formCode) => $@"
+                exec dbo.SP_IEPCTKCMLAlgorithm_v4 
                 @type = 'selectForGrid', 
                 @fdate = null, 
                 @tdate = null,  
@@ -276,14 +281,15 @@ namespace WebAPI.Infrastructure.Repositories
                 @ToNumber = 100000,  
                 @SQLSortString = '',  
                 @SQLFilterString = '',
-                @clientId = 'IEPC-SMIT',
-                @username = 'IEPC-SMIT@indoglobus.com',
-                @FormCode = 'IEPC-TKINVEAL',
+                @clientId = '{clientId}',
+                @username = '{username}',
+                @FormCode = '{formCode}',
                 @IsRefresh = 0"
             },
 
             { "TK Scheduler Report",
-                @"exec dbo.SP_IEPCTKSchedulerReport_v4 
+                (clientId, username, formCode) => $@"
+                exec dbo.SP_IEPCTKSchedulerReport_v4 
                 @type = 'selectForGrid', 
                 @fdate = null, 
                 @tdate = null,  
@@ -291,14 +297,15 @@ namespace WebAPI.Infrastructure.Repositories
                 @ToNumber = 100000,  
                 @SQLSortString = '',  
                 @SQLFilterString = '',
-                @clientId = 'IEPC-SMIT',
-                @username = 'IEPC-SMIT@indoglobus.com',
-                @FormCode = 'IEPC-TKINVEAL',
+                @clientId = '{clientId}',
+                @username = '{username}',
+                @FormCode = '{formCode}',
                 @IsRefresh = 0"
             },
 
             { "TK Findings Report",
-                @"exec dbo.Sp_IEPCTKNotesAndFindingAuditReport_v4 
+                (clientId, username, formCode) => $@"
+                exec dbo.Sp_IEPCTKNotesAndFindingAuditReport_v4 
                 @type = 'selectForGrid', 
                 @fdate = null, 
                 @tdate = null,  
@@ -306,14 +313,15 @@ namespace WebAPI.Infrastructure.Repositories
                 @ToNumber = 100000,  
                 @SQLSortString = '',  
                 @SQLFilterString = '',
-                @clientId = 'IEPC-SMIT',
-                @useremail = 'IEPC-SMIT@indoglobus.com',
-                @FormCode = 'IEPC-TKINVEAL',
+                @clientId = '{clientId}',
+                @useremail = '{username}',
+                @FormCode = '{formCode}',
                 @IsRefresh = 0"
             },
 
             { "PRD Audit Report",
-                @"exec dbo.Sp_IEPCPRDAuditReport_v4 
+                (clientId, username, formCode) => $@"
+                exec dbo.Sp_IEPCPRDAuditReport_v4 
                 @type = 'selectForGrid', 
                 @fdate = null, 
                 @tdate = null,  
@@ -321,15 +329,16 @@ namespace WebAPI.Infrastructure.Repositories
                 @ToNumber = 100000,  
                 @SQLSortString = '',  
                 @SQLFilterString = '',
-                @clientId = 'IEPC-SMIT',
-                @useremail = 'IEPC-SMIT@indoglobus.com',
-                @FormCode = 'IEPC-PRDINVEAL',
+                @clientId = '{clientId}',
+                @useremail = '{username}',
+                @FormCode = '{formCode}',
                 @value8 = '',
                 @IsRefresh = 0"
             },
 
             { "PRD Findings Report",
-                @"exec dbo.Sp_IEPCPRDNotesAndFindingAuditReport_v4 
+                (clientId, username, formCode) => $@"
+                exec dbo.Sp_IEPCPRDNotesAndFindingAuditReport_v4 
                 @type = 'selectForGrid', 
                 @fdate = null, 
                 @tdate = null,  
@@ -337,15 +346,15 @@ namespace WebAPI.Infrastructure.Repositories
                 @ToNumber = 100000,  
                 @SQLSortString = '',  
                 @SQLFilterString = '',
-                @clientId = 'IEPC-SMIT',
-                @useremail = 'IEPC-SMIT@indoglobus.com',
-                @FormCode = 'IEPC-PRDINVEAL',
+                @clientId = '{clientId}',
+                @useremail = '{username}',
+                @FormCode = '{formCode}',
                 @IsRefresh = 0"
             },
 
             //Advanced Analytics -----------------------------------------------------------
-            { "PV CML Algorithm",
-                @"exec dbo.SP_IEPCCMLTableAlgorithm_v4 
+            { "PV CML Algorithm", (clientId, username, formCode) =>
+                $@"exec dbo.SP_IEPCCMLTableAlgorithm_v4 
                     @type = 'selectForGrid', 
                     @fdate = null, 
                     @tdate = null,  
@@ -353,14 +362,14 @@ namespace WebAPI.Infrastructure.Repositories
                     @ToNumber = 10,  
                     @SQLSortString = '',  
                     @SQLFilterString = '',
-                    @clientId = 'IEPC-SMIT',
-                    @username = 'IEPC-SMIT@indoglobus.com',
-                    @FormCode = 'IEPC-PVINVEAL',
+                    @clientId = '{clientId}',
+                    @username = '{username}',
+                    @FormCode = '{formCode}',
                     @IsRefresh = 0"
             },
 
-            { "PV Asset Algorithm",
-                @"exec dbo.SP_IEPCAssetTableAlgorithm_v4 
+            { "PV Asset Algorithm", (clientId, username, formCode) =>
+                $@"exec dbo.SP_IEPCAssetTableAlgorithm_v4 
                     @type = 'selectForGrid', 
                     @fdate = null, 
                     @tdate = null,  
@@ -368,14 +377,14 @@ namespace WebAPI.Infrastructure.Repositories
                     @ToNumber = 10,  
                     @SQLSortString = '',  
                     @SQLFilterString = '',
-                    @clientId = 'IEPC-SMIT',
-                    @username = 'IEPC-SMIT@indoglobus.com',
-                    @FormCode = 'IEPC-PVINVEAL',
+                    @clientId = '{clientId}',
+                    @username = '{username}',
+                    @FormCode = '{formCode}',
                     @IsRefresh = 0"
             },
 
-            { "PV Scheduler Algorithm",
-                @"exec dbo.SP_IEPCPVSchedulerAlgorithm_v4 
+            { "PV Scheduler Algorithm", (clientId, username, formCode) =>
+                $@"exec dbo.SP_IEPCPVSchedulerAlgorithm_v4 
                     @type = 'selectForGrid', 
                     @fdate = null, 
                     @tdate = null,  
@@ -383,14 +392,14 @@ namespace WebAPI.Infrastructure.Repositories
                     @ToNumber = 10,  
                     @SQLSortString = '',  
                     @SQLFilterString = '',
-                    @clientId = 'IEPC-SMIT',
-                    @username = 'IEPC-SMIT@indoglobus.com',
-                    @FormCode = 'IEPC-PVINVEAL',
+                    @clientId = '{clientId}',
+                    @username = '{username}',
+                    @FormCode = '{formCode}',
                     @IsRefresh = 0"
             },
 
-            { "PP CML Algorithm",
-                @"exec dbo.SP_IEPCPPCMLAlgorithm_v4 
+            { "PP CML Algorithm", (clientId, username, formCode) =>
+                $@"exec dbo.SP_IEPCPPCMLAlgorithm_v4 
                     @type = 'selectForGrid', 
                     @fdate = null, 
                     @tdate = null,  
@@ -398,14 +407,14 @@ namespace WebAPI.Infrastructure.Repositories
                     @ToNumber = 10,  
                     @SQLSortString = '',  
                     @SQLFilterString = '',
-                    @clientId = 'IEPC-SMIT',
-                    @username = 'IEPC-SMIT@indoglobus.com',
-                    @FormCode = 'IEPC-PPINVEAL',
+                    @clientId = '{clientId}',
+                    @username = '{username}',
+                    @FormCode = '{formCode}',
                     @IsRefresh = 0"
             },
 
-            { "PP Asset Algorithm",
-                @"exec dbo.SP_IEPCPPAssetAlgorithm_v4 
+            { "PP Asset Algorithm", (clientId, username, formCode) =>
+                $@"exec dbo.SP_IEPCPPAssetAlgorithm_v4 
                     @type = 'selectForGrid', 
                     @fdate = null, 
                     @tdate = null,  
@@ -413,14 +422,14 @@ namespace WebAPI.Infrastructure.Repositories
                     @ToNumber = 10,  
                     @SQLSortString = '',  
                     @SQLFilterString = '',
-                    @clientId = 'IEPC-SMIT',
-                    @username = 'IEPC-SMIT@indoglobus.com',
-                    @FormCode = 'IEPC-PPINVEAL',
+                    @clientId = '{clientId}',
+                    @username = '{username}',
+                    @FormCode = '{formCode}',
                     @IsRefresh = 0"
             },
 
-            { "PP Scheduler Algorithm",
-                @"exec dbo.SP_IEPCPPSchedulerAlgorithm_v4 
+            { "PP Scheduler Algorithm", (clientId, username, formCode) =>
+                $@"exec dbo.SP_IEPCPPSchedulerAlgorithm_v4 
                     @type = 'selectForGrid', 
                     @fdate = null, 
                     @tdate = null,  
@@ -428,14 +437,14 @@ namespace WebAPI.Infrastructure.Repositories
                     @ToNumber = 10,  
                     @SQLSortString = '',  
                     @SQLFilterString = '',
-                    @clientId = 'IEPC-SMIT',
-                    @username = 'IEPC-SMIT@indoglobus.com',
-                    @FormCode = 'IEPC-PPINVEAL',
+                    @clientId = '{clientId}',
+                    @username = '{username}',
+                    @FormCode = '{formCode}',
                     @IsRefresh = 0"
             },
 
-            { "TK CML Algorithm",
-                @"exec dbo.SP_IEPCTKCMLAlgorithm_V4 
+            { "TK CML Algorithm", (clientId, username, formCode) =>
+                $@"exec dbo.SP_IEPCTKCMLAlgorithm_V4 
                     @type = 'selectForGrid', 
                     @fdate = null, 
                     @tdate = null,  
@@ -443,14 +452,14 @@ namespace WebAPI.Infrastructure.Repositories
                     @ToNumber = 10,  
                     @SQLSortString = '',  
                     @SQLFilterString = '',
-                    @clientId = 'IEPC-SMIT',
-                    @username = 'IEPC-SMIT@indoglobus.com',
-                    @FormCode = 'IEPC-TKINVEAL',
+                    @clientId = '{clientId}',
+                    @username = '{username}',
+                    @FormCode = '{formCode}',
                     @IsRefresh = 0"
             },
 
-            { "TK Asset Algorithm",
-                @"exec dbo.SP_IEPCTKAssetAlgorithm_v4 
+            { "TK Asset Algorithm", (clientId, username, formCode) =>
+                $@"exec dbo.SP_IEPCTKAssetAlgorithm_v4 
                     @type = 'selectForGrid', 
                     @fdate = null, 
                     @tdate = null,  
@@ -458,14 +467,14 @@ namespace WebAPI.Infrastructure.Repositories
                     @ToNumber = 10,  
                     @SQLSortString = '',  
                     @SQLFilterString = '',
-                    @clientId = 'IEPC-SMIT',
-                    @username = 'IEPC-SMIT@indoglobus.com',
-                    @FormCode = 'IEPC-TKINVEAL',
+                    @clientId = '{clientId}',
+                    @username = '{username}',
+                    @FormCode = '{formCode}',
                     @IsRefresh = 0"
             },
 
-            { "TK Scheduler Algorithm",
-                @"exec dbo.SP_IEPCTKSchedulerAlgorithm_v4 
+            { "TK Scheduler Algorithm", (clientId, username, formCode) =>
+                $@"exec dbo.SP_IEPCTKSchedulerAlgorithm_v4 
                     @type = 'selectForGrid', 
                     @fdate = null, 
                     @tdate = null,  
@@ -473,14 +482,14 @@ namespace WebAPI.Infrastructure.Repositories
                     @ToNumber = 10,  
                     @SQLSortString = '',  
                     @SQLFilterString = '',
-                    @clientId = 'IEPC-SMIT',
-                    @username = 'IEPC-SMIT@indoglobus.com',
-                    @FormCode = 'IEPC-TKINVEAL',
+                    @clientId = '{clientId}',
+                    @username = '{username}',
+                    @FormCode = '{formCode}',
                     @IsRefresh = 0"
             },
 
-            { "PRD Asset Algorithm",
-                @"exec dbo.Sp_IEPCPRDAssetAlgorithm_V4 
+            { "PRD Asset Algorithm", (clientId, username, formCode) =>
+                $@"exec dbo.Sp_IEPCPRDAssetAlgorithm_V4 
                     @type = 'selectForGrid', 
                     @fdate = null, 
                     @tdate = null,  
@@ -488,16 +497,17 @@ namespace WebAPI.Infrastructure.Repositories
                     @ToNumber = 10,  
                     @SQLSortString = '',  
                     @SQLFilterString = '',
-                    @clientId = 'IEPC-SMIT',
-                    @useremail = 'IEPC-SMIT@indoglobus.com',
-                    @FormCode = 'IEPC-PRDINVEAL',
+                    @clientId = '{clientId}',
+                    @useremail = '{username}',
+                    @FormCode = '{formCode}',
                     @IsRefresh = 1"
             },
 
+
             //Facility & System -----------------------------------------------------------
 
-            { "Facility",
-                @"exec dbo.SP_formdataIEPCFacilityShared 
+            { "Facility", (clientId, username, formCode) =>
+                $@"exec dbo.SP_formdataIEPCFacilityShared 
                     @type = 'selectForGrid', 
                     @fdate = null, 
                     @tdate = null,  
@@ -505,13 +515,13 @@ namespace WebAPI.Infrastructure.Repositories
                     @ToNumber = 10,  
                     @SQLSortString = '',  
                     @SQLFilterString = '',
-                    @clientId = 'IEPC-SMIT',
-                    @useremail = 'IEPC-SMIT@indoglobus.com',
-                    @FormCode = 'IEPC-FS'"
+                    @clientId = '{clientId}',
+                    @useremail = '{username}',
+                    @FormCode = '{formCode}'"
             },
 
-            { "System List",
-                @"exec dbo.SP_formdataIEPCSystemHierarchyShared 
+            { "System List", (clientId, username, formCode) =>
+                $@"exec dbo.SP_formdataIEPCSystemHierarchyShared 
                     @type = 'selectForGrid', 
                     @fdate = null, 
                     @tdate = null,  
@@ -519,15 +529,18 @@ namespace WebAPI.Infrastructure.Repositories
                     @ToNumber = 10,  
                     @SQLSortString = '',  
                     @SQLFilterString = '',
-                    @clientId = 'IEPC-SMIT',
-                    @useremail = 'IEPC-SMIT@indoglobus.com',
-                    @FormCode = 'IEPC-SHS'"
+                    @clientId = '{clientId}',
+                    @useremail = '{username}',
+                    @FormCode = '{formCode}'"
             },
+
 
             //PV Source Data -----------------------------------------------------------
 
-            { "PV Inventory",
-                @"exec dbo.SP_formdataIEPCPVInventoryAssetLevelAddEditReport_v1 
+            {
+                "PV Inventory",
+                (clientId, username, formCode) => $@"
+                    exec dbo.SP_formdataIEPCPVInventoryAssetLevelAddEditReport_v1 
                     @type = 'selectForGrid', 
                     @fdate = null, 
                     @tdate = null,  
@@ -535,13 +548,15 @@ namespace WebAPI.Infrastructure.Repositories
                     @ToNumber = 10,  
                     @SQLSortString = '',  
                     @SQLFilterString = '',
-                    @clientId = 'IEPC-SMIT',
-                    @username = 'IEPC-SMIT@indoglobus.com',
-                    @FormCode = 'IEPC-PVINVEAL'"
+                    @clientId = '{{clientId}}',
+                    @username = '{{username}}',
+                    @FormCode = '{{formCode}}'"
             },
 
-            { "PV Design",
-                @"exec dbo.SP_FormDataIEPCPVDesignAssetLevel 
+            {
+                "PV Design",
+                (clientId, username, formCode) => $@"
+                    exec dbo.SP_FormDataIEPCPVDesignAssetLevel 
                     @type = 'selectForGrid', 
                     @fdate = null, 
                     @tdate = null,  
@@ -549,13 +564,15 @@ namespace WebAPI.Infrastructure.Repositories
                     @ToNumber = 10,  
                     @SQLSortString = '',  
                     @SQLFilterString = '',
-                    @clientId = 'IEPC-SMIT',
-                    @useremail = 'IEPC-SMIT@indoglobus.com',
-                    @FormCode = 'IEPC-PVDAL'"
+                    @clientId = '{{clientId}}',
+                    @useremail = '{{username}}',
+                    @FormCode = '{{formCode}}'"
             },
 
-            { "PV Operation",
-                @"exec dbo.SP_FormDataIEPCPVOperationsAssetLevel 
+            {
+                "PV Operation",
+                (clientId, username, formCode) => $@"
+                    exec dbo.SP_FormDataIEPCPVOperationsAssetLevel 
                     @type = 'selectForGrid', 
                     @fdate = null, 
                     @tdate = null,  
@@ -563,13 +580,15 @@ namespace WebAPI.Infrastructure.Repositories
                     @ToNumber = 10,  
                     @SQLSortString = '',  
                     @SQLFilterString = '',
-                    @clientId = 'IEPC-SMIT',
-                    @useremail = 'IEPC-SMIT@indoglobus.com',
-                    @FormCode = 'IEPC-PVOPRTN'"
+                    @clientId = '{{clientId}}',
+                    @useremail = '{{username}}',
+                    @FormCode = '{{formCode}}'"
             },
 
-            { "PV Options",
-                @"exec dbo.SP_FormDataIEPCPVOptionsAssetLevel 
+            {
+                "PV Options",
+                (clientId, username, formCode) => $@"
+                    exec dbo.SP_FormDataIEPCPVOptionsAssetLevel 
                     @type = 'selectForGrid', 
                     @fdate = null, 
                     @tdate = null,  
@@ -577,13 +596,15 @@ namespace WebAPI.Infrastructure.Repositories
                     @ToNumber = 10,  
                     @SQLSortString = '',  
                     @SQLFilterString = '',
-                    @clientId = 'IEPC-SMIT',
-                    @useremail = 'IEPC-SMIT@indoglobus.com',
-                    @FormCode = 'IEPC-OPTION'"
+                    @clientId = '{{clientId}}',
+                    @useremail = '{{username}}',
+                    @FormCode = '{{formCode}}'"
             },
 
-            { "PV Inspection Scheduler",
-                @"exec dbo.SP_FormDataIEPCPVInspectionSchedulerChild 
+            {
+                "PV Inspection Scheduler",
+                (clientId, username, formCode) => $@"
+                    exec dbo.SP_FormDataIEPCPVInspectionSchedulerChild 
                     @type = 'selectForGrid', 
                     @fdate = null, 
                     @tdate = null,  
@@ -591,13 +612,15 @@ namespace WebAPI.Infrastructure.Repositories
                     @ToNumber = 10,  
                     @SQLSortString = '',  
                     @SQLFilterString = '',
-                    @clientId = 'IEPC-SMIT',
-                    @useremail = 'IEPC-SMIT@indoglobus.com',
-                    @FormCode = 'IEPC-PVINSC'"
+                    @clientId = '{{clientId}}',
+                    @useremail = '{{username}}',
+                    @FormCode = '{{formCode}}'"
             },
 
-            { "PV Inspections",
-                @"exec dbo.SP_formdataIEPCPVInspectionsChildOfAsset 
+            {
+                "PV Inspections",
+                (clientId, username, formCode) => $@"
+                    exec dbo.SP_formdataIEPCPVInspectionsChildOfAsset 
                     @type = 'selectForGrid', 
                     @fdate = null, 
                     @tdate = null,  
@@ -605,13 +628,15 @@ namespace WebAPI.Infrastructure.Repositories
                     @ToNumber = 10,  
                     @SQLSortString = '',  
                     @SQLFilterString = '',
-                    @clientId = 'IEPC-SMIT',
-                    @useremail = 'IEPC-SMIT@indoglobus.com',
-                    @FormCode = 'IEPC-PVINSPCD'"
+                    @clientId = '{{clientId}}',
+                    @useremail = '{{username}}',
+                    @FormCode = '{{formCode}}'"
             },
 
-            { "PV Notes & Findings",
-                @"exec dbo.SP_FormDataIEPCPVNotesOrFindingsChildofAsset 
+            {
+                "PV Notes & Findings",
+                (clientId, username, formCode) => $@"
+                    exec dbo.SP_FormDataIEPCPVNotesOrFindingsChildofAsset 
                     @type = 'selectForGrid', 
                     @fdate = null, 
                     @tdate = null,  
@@ -619,13 +644,15 @@ namespace WebAPI.Infrastructure.Repositories
                     @ToNumber = 10,  
                     @SQLSortString = '',  
                     @SQLFilterString = '',
-                    @clientId = 'IEPC-SMIT',
-                    @useremail = 'IEPC-SMIT@indoglobus.com',
-                    @FormCode = 'IEPC-PVNFCOA'"
+                    @clientId = '{{clientId}}',
+                    @useremail = '{{username}}',
+                    @FormCode = '{{formCode}}'"
             },
 
-            { "PV Components",
-                @"exec dbo.SP_FormDataIEPCPVComponentChildofAsset 
+            {
+                "PV Components",
+                (clientId, username, formCode) => $@"
+                    exec dbo.SP_FormDataIEPCPVComponentChildofAsset 
                     @type = 'selectForGrid', 
                     @fdate = null, 
                     @tdate = null,  
@@ -633,13 +660,15 @@ namespace WebAPI.Infrastructure.Repositories
                     @ToNumber = 10,  
                     @SQLSortString = '',  
                     @SQLFilterString = '',
-                    @clientId = 'IEPC-SMIT',
-                    @useremail = 'IEPC-SMIT@indoglobus.com',
-                    @FormCode = 'IEPC-PVCCDOA'"
+                    @clientId = '{{clientId}}',
+                    @useremail = '{{username}}',
+                    @FormCode = '{{formCode}}'"
             },
 
-            { "PV CMLs",
-                @"exec dbo.SP_FormDataIEPCPVCMLChildofComponent 
+            {
+                "PV CMLs",
+                (clientId, username, formCode) => $@"
+                    exec dbo.SP_FormDataIEPCPVCMLChildofComponent 
                     @type = 'selectForGrid', 
                     @fdate = null, 
                     @tdate = null,  
@@ -647,13 +676,15 @@ namespace WebAPI.Infrastructure.Repositories
                     @ToNumber = 10,  
                     @SQLSortString = '',  
                     @SQLFilterString = '',
-                    @clientId = 'IEPC-SMIT',
-                    @useremail = 'IEPC-SMIT@indoglobus.com',
-                    @FormCode = 'IEPC-PVCMLCOC'"
+                    @clientId = '{{clientId}}',
+                    @useremail = '{{username}}',
+                    @FormCode = '{{formCode}}'"
             },
 
-            { "PV CML Readings",
-                @"exec dbo.SP_formdataIEPCPVCMLReadingsChildofCML 
+            {
+                "PV CML Readings",
+                (clientId, username, formCode) => $@"
+                    exec dbo.SP_formdataIEPCPVCMLReadingsChildofCML 
                     @type = 'selectForGrid', 
                     @fdate = null, 
                     @tdate = null,  
@@ -661,33 +692,21 @@ namespace WebAPI.Infrastructure.Repositories
                     @ToNumber = 10,  
                     @SQLSortString = '',  
                     @SQLFilterString = '',
-                    @clientId = 'IEPC-SMIT',
-                    @useremail = 'IEPC-SMIT@indoglobus.com',
-                    @FormCode = 'IEPC-PVCMLRCOCML'"
+                    @clientId = '{{clientId}}',
+                    @useremail = '{{username}}',
+                    @FormCode = '{{formCode}}'"
             },
 
             { "PV CML Readings(Multi-Edit)",
-                @"exec "
+                 (clientId, username, formCode) => $@"exec "
             },
 
             //PP Source Data -------------------------------------------------------------
 
-            { "PP Inventory",
-            @"exec dbo.SP_formdataIEPCPPInventoryAssetLevelAddEditReport 
-                @type = 'selectForGrid', 
-                @fdate = null, 
-                @tdate = null,  
-                @FromNumber = 1,  
-                @ToNumber = 10,  
-                @SQLSortString = '',  
-                @SQLFilterString = '',
-                @clientId = 'IEPC-SMIT',
-                @username = 'IEPC-SMIT@indoglobus.com',
-                @FormCode = 'IEPC-PPINVEAL'"
-            },
-
-            { "PP Design",
-                @"exec dbo.SP_FormDataIEPCPPDesignAssetLevel 
+           {
+                "PP Inventory",
+                (clientId, username, formCode) => $@"
+                    exec dbo.SP_formdataIEPCPPInventoryAssetLevelAddEditReport 
                     @type = 'selectForGrid', 
                     @fdate = null, 
                     @tdate = null,  
@@ -695,13 +714,15 @@ namespace WebAPI.Infrastructure.Repositories
                     @ToNumber = 10,  
                     @SQLSortString = '',  
                     @SQLFilterString = '',
-                    @clientId = 'IEPC-SMIT',
-                    @useremail = 'IEPC-SMIT@indoglobus.com',
-                    @FormCode = 'IEPC-PPDAL'"
+                    @clientId = '{clientId}',
+                    @username = '{username}',
+                    @FormCode = '{formCode}'"
             },
 
-            { "PP Operation",
-                @"exec dbo.SP_formdataIEPCPPOperationAssetLevel 
+            {
+                "PP Design",
+                (clientId, username, formCode) => $@"
+                    exec dbo.SP_FormDataIEPCPPDesignAssetLevel 
                     @type = 'selectForGrid', 
                     @fdate = null, 
                     @tdate = null,  
@@ -709,13 +730,15 @@ namespace WebAPI.Infrastructure.Repositories
                     @ToNumber = 10,  
                     @SQLSortString = '',  
                     @SQLFilterString = '',
-                    @clientId = 'IEPC-SMIT',
-                    @username = 'IEPC-SMIT@indoglobus.com',
-                    @FormCode = 'IEPC-PPOPRTN'"
+                    @clientId = '{clientId}',
+                    @useremail = '{username}',
+                    @FormCode = '{formCode}'"
             },
 
-            { "PP Options",
-                @"exec dbo.SP_FormDataIEPCPPOptionsAssetLevel 
+            {
+                "PP Operation",
+                (clientId, username, formCode) => $@"
+                    exec dbo.SP_formdataIEPCPPOperationAssetLevel 
                     @type = 'selectForGrid', 
                     @fdate = null, 
                     @tdate = null,  
@@ -723,13 +746,15 @@ namespace WebAPI.Infrastructure.Repositories
                     @ToNumber = 10,  
                     @SQLSortString = '',  
                     @SQLFilterString = '',
-                    @clientId = 'IEPC-SMIT',
-                    @useremail = 'IEPC-SMIT@indoglobus.com',
-                    @FormCode = 'IEPC-PPOPTION'"
+                    @clientId = '{clientId}',
+                    @username = '{username}',
+                    @FormCode = '{formCode}'"
             },
 
-            { "PP Inspection Scheduler",
-                @"exec dbo.SP_FormDataIEPCPPInspectionSchedulerChild 
+            {
+                "PP Options",
+                (clientId, username, formCode) => $@"
+                    exec dbo.SP_FormDataIEPCPPOptionsAssetLevel 
                     @type = 'selectForGrid', 
                     @fdate = null, 
                     @tdate = null,  
@@ -737,13 +762,15 @@ namespace WebAPI.Infrastructure.Repositories
                     @ToNumber = 10,  
                     @SQLSortString = '',  
                     @SQLFilterString = '',
-                    @clientId = 'IEPC-SMIT',
-                    @useremail = 'IEPC-SMIT@indoglobus.com',
-                    @FormCode = 'IEPC-PPINSC'"
+                    @clientId = '{clientId}',
+                    @useremail = '{username}',
+                    @FormCode = '{formCode}'"
             },
 
-            { "PP Inspections",
-                @"exec dbo.SP_formdataIEPCPPInspectionsChildOfAsset 
+            {
+                "PP Inspection Scheduler",
+                (clientId, username, formCode) => $@"
+                    exec dbo.SP_FormDataIEPCPPInspectionSchedulerChild 
                     @type = 'selectForGrid', 
                     @fdate = null, 
                     @tdate = null,  
@@ -751,13 +778,15 @@ namespace WebAPI.Infrastructure.Repositories
                     @ToNumber = 10,  
                     @SQLSortString = '',  
                     @SQLFilterString = '',
-                    @clientId = 'IEPC-SMIT',
-                    @useremail = 'IEPC-SMIT@indoglobus.com',
-                    @FormCode = 'IEPC-PPINSPCD'"
+                    @clientId = '{clientId}',
+                    @useremail = '{username}',
+                    @FormCode = '{formCode}'"
             },
 
-            { "PP Notes & Findings",
-                @"exec dbo.SP_FormDataIEPCPPNotesOrFindingsChildofAsset 
+            {
+                "PP Inspections",
+                (clientId, username, formCode) => $@"
+                    exec dbo.SP_formdataIEPCPPInspectionsChildOfAsset 
                     @type = 'selectForGrid', 
                     @fdate = null, 
                     @tdate = null,  
@@ -765,13 +794,15 @@ namespace WebAPI.Infrastructure.Repositories
                     @ToNumber = 10,  
                     @SQLSortString = '',  
                     @SQLFilterString = '',
-                    @clientId = 'IEPC-SMIT',
-                    @useremail = 'IEPC-SMIT@indoglobus.com',
-                    @FormCode = 'IEPC-PPNFCOA'"
+                    @clientId = '{clientId}',
+                    @useremail = '{username}',
+                    @FormCode = '{formCode}'"
             },
 
-            { "PP Components",
-                @"exec dbo.SP_FormDataIEPCPPComponentChildofAsset 
+            {
+                "PP Notes & Findings",
+                (clientId, username, formCode) => $@"
+                    exec dbo.SP_FormDataIEPCPPNotesOrFindingsChildofAsset 
                     @type = 'selectForGrid', 
                     @fdate = null, 
                     @tdate = null,  
@@ -779,13 +810,15 @@ namespace WebAPI.Infrastructure.Repositories
                     @ToNumber = 10,  
                     @SQLSortString = '',  
                     @SQLFilterString = '',
-                    @clientId = 'IEPC-SMIT',
-                    @useremail = 'IEPC-SMIT@indoglobus.com',
-                    @FormCode = 'IEPC-PPCCDOA'"
+                    @clientId = '{clientId}',
+                    @useremail = '{username}',
+                    @FormCode = '{formCode}'"
             },
 
-            { "PP CMLs",
-                @"exec dbo.SP_FormDataIEPCPPCMLChildofComponent 
+            {
+                "PP Components",
+                (clientId, username, formCode) => $@"
+                    exec dbo.SP_FormDataIEPCPPComponentChildofAsset 
                     @type = 'selectForGrid', 
                     @fdate = null, 
                     @tdate = null,  
@@ -793,13 +826,15 @@ namespace WebAPI.Infrastructure.Repositories
                     @ToNumber = 10,  
                     @SQLSortString = '',  
                     @SQLFilterString = '',
-                    @clientId = 'IEPC-SMIT',
-                    @useremail = 'IEPC-SMIT@indoglobus.com',
-                    @FormCode = 'IEPC-PPCMLCOC'"
+                    @clientId = '{clientId}',
+                    @useremail = '{username}',
+                    @FormCode = '{formCode}'"
             },
 
-            { "PP CML Readings",
-                @"exec dbo.SP_formdataIEPCPPCMLReadingsChildofCML 
+            {
+                "PP CMLs",
+                (clientId, username, formCode) => $@"
+                    exec dbo.SP_FormDataIEPCPPCMLChildofComponent 
                     @type = 'selectForGrid', 
                     @fdate = null, 
                     @tdate = null,  
@@ -807,15 +842,34 @@ namespace WebAPI.Infrastructure.Repositories
                     @ToNumber = 10,  
                     @SQLSortString = '',  
                     @SQLFilterString = '',
-                    @clientId = 'IEPC-SMIT',
-                    @useremail = 'IEPC-SMIT@indoglobus.com',
-                    @FormCode = 'IEPC-PPCMLRCOCML'"
+                    @clientId = '{clientId}',
+                    @useremail = '{username}',
+                    @FormCode = '{formCode}'"
+            },
+
+            {
+                "PP CML Readings",
+                (clientId, username, formCode) => $@"
+                    exec dbo.SP_formdataIEPCPPCMLReadingsChildofCML 
+                    @type = 'selectForGrid', 
+                    @fdate = null, 
+                    @tdate = null,  
+                    @FromNumber = 1,  
+                    @ToNumber = 10,  
+                    @SQLSortString = '',  
+                    @SQLFilterString = '',
+                    @clientId = '{clientId}',
+                    @useremail = '{username}',
+                    @FormCode = '{formCode}'"
             },
 
             //TK Source Data -------------------------------------------------------------
 
-            { "TK Inventory",
-                @"exec dbo.SP_formdataIEPCTKInventoryAssetLevelAddEditReport 
+           
+            { 
+                "TK Inventory",
+                (clientId, username, formCode) => $@"
+                    exec dbo.SP_formdataIEPCTKInventoryAssetLevelAddEditReport 
                     @type = 'selectForGrid', 
                     @fdate = null, 
                     @tdate = null,  
@@ -823,13 +877,15 @@ namespace WebAPI.Infrastructure.Repositories
                     @ToNumber = 10,  
                     @SQLSortString = '',  
                     @SQLFilterString = '',
-                    @clientId = 'IEPC-SMIT',
-                    @username = 'IEPC-SMIT@indoglobus.com',
-                    @FormCode = 'IEPC-TKINVEAL'"
+                    @clientId = '{clientId}',
+                    @username = '{username}',
+                    @FormCode = '{formCode}'"
             },
 
-            { "TK Design",
-                @"exec dbo.SP_FormDataIEPCTKDesignAssetLevel 
+            {
+                "TK Design",
+                (clientId, username, formCode) => $@"
+                    exec dbo.SP_FormDataIEPCTKDesignAssetLevel 
                     @type = 'selectForGrid', 
                     @fdate = null, 
                     @tdate = null,  
@@ -837,13 +893,15 @@ namespace WebAPI.Infrastructure.Repositories
                     @ToNumber = 10,  
                     @SQLSortString = '',  
                     @SQLFilterString = '',
-                    @clientId = 'IEPC-SMIT',
-                    @useremail = 'IEPC-SMIT@indoglobus.com',
-                    @FormCode = 'IEPC-TKDAL'"
+                    @clientId = '{clientId}',
+                    @useremail = '{username}',
+                    @FormCode = '{formCode}'"
             },
 
-            { "TK Operation",
-                @"exec dbo.SP_formdataIEPCTKOperationAssetLevel 
+            {
+                "TK Operation",
+                (clientId, username, formCode) => $@"
+                    exec dbo.SP_formdataIEPCTKOperationAssetLevel 
                     @type = 'selectForGrid', 
                     @fdate = null, 
                     @tdate = null,  
@@ -851,13 +909,15 @@ namespace WebAPI.Infrastructure.Repositories
                     @ToNumber = 10,  
                     @SQLSortString = '',  
                     @SQLFilterString = '',
-                    @clientId = 'IEPC-SMIT',
-                    @username = 'IEPC-SMIT@indoglobus.com',
-                    @FormCode = 'IEPC-TKOPRTN'"
+                    @clientId = '{clientId}',
+                    @username = '{username}',
+                    @FormCode = '{formCode}'"
             },
 
-            { "TK Options",
-                @"exec dbo.SP_FormDataIEPCTKOptionsAssetLevel 
+            {
+                "TK Options",
+                (clientId, username, formCode) => $@"
+                    exec dbo.SP_FormDataIEPCTKOptionsAssetLevel 
                     @type = 'selectForGrid', 
                     @fdate = null, 
                     @tdate = null,  
@@ -865,13 +925,15 @@ namespace WebAPI.Infrastructure.Repositories
                     @ToNumber = 10,  
                     @SQLSortString = '',  
                     @SQLFilterString = '',
-                    @clientId = 'IEPC-SMIT',
-                    @useremail = 'IEPC-SMIT@indoglobus.com',
-                    @FormCode = 'IEPC-TKOPTION'"
+                    @clientId = '{clientId}',
+                    @useremail = '{username}',
+                    @FormCode = '{formCode}'"
             },
 
-            { "TK Inspection Scheduler",
-                @"exec dbo.SP_FormDataIEPCTKInspectionSchedulerChild 
+            {
+                "TK Inspection Scheduler",
+                (clientId, username, formCode) => $@"
+                    exec dbo.SP_FormDataIEPCTKInspectionSchedulerChild 
                     @type = 'selectForGrid', 
                     @fdate = null, 
                     @tdate = null,  
@@ -879,13 +941,15 @@ namespace WebAPI.Infrastructure.Repositories
                     @ToNumber = 10,  
                     @SQLSortString = '',  
                     @SQLFilterString = '',
-                    @clientId = 'IEPC-SMIT',
-                    @useremail = 'IEPC-SMIT@indoglobus.com',
-                    @FormCode = 'IEPC-TKINSC'"
+                    @clientId = '{clientId}',
+                    @useremail = '{username}',
+                    @FormCode = '{formCode}'"
             },
 
-            { "TK Inspections",
-                @"exec dbo.SP_formdataIEPCTKInspectionsChildofAsset 
+            {
+                "TK Inspections",
+                (clientId, username, formCode) => $@"
+                    exec dbo.SP_formdataIEPCTKInspectionsChildofAsset 
                     @type = 'selectForGrid', 
                     @fdate = null, 
                     @tdate = null,  
@@ -893,13 +957,15 @@ namespace WebAPI.Infrastructure.Repositories
                     @ToNumber = 10,  
                     @SQLSortString = '',  
                     @SQLFilterString = '',
-                    @clientId = 'IEPC-SMIT',
-                    @useremail = 'IEPC-SMIT@indoglobus.com',
-                    @FormCode = 'IEPC-TKINSPCD'"
+                    @clientId = '{clientId}',
+                    @useremail = '{username}',
+                    @FormCode = '{formCode}'"
             },
 
-            { "TK Notes & Findings",
-                @"exec dbo.SP_FormDataIEPCTKNotesOrFindingsChildofAsset 
+            {
+                "TK Notes & Findings",
+                (clientId, username, formCode) => $@"
+                    exec dbo.SP_FormDataIEPCTKNotesOrFindingsChildofAsset 
                     @type = 'selectForGrid', 
                     @fdate = null, 
                     @tdate = null,  
@@ -907,13 +973,15 @@ namespace WebAPI.Infrastructure.Repositories
                     @ToNumber = 10,  
                     @SQLSortString = '',  
                     @SQLFilterString = '',
-                    @clientId = 'IEPC-SMIT',
-                    @useremail = 'IEPC-SMIT@indoglobus.com',
-                    @FormCode = 'IEPC-TKNFCOA'"
+                    @clientId = '{clientId}',
+                    @useremail = '{username}',
+                    @FormCode = '{formCode}'"
             },
 
-            { "TK Components",
-                @"exec dbo.SP_FormDataIEPCTKComponentChildofAsset 
+            {
+                "TK Components",
+                (clientId, username, formCode) => $@"
+                    exec dbo.SP_FormDataIEPCTKComponentChildofAsset 
                     @type = 'selectForGrid', 
                     @fdate = null, 
                     @tdate = null,  
@@ -921,13 +989,15 @@ namespace WebAPI.Infrastructure.Repositories
                     @ToNumber = 10,  
                     @SQLSortString = '',  
                     @SQLFilterString = '',
-                    @clientId = 'IEPC-SMIT',
-                    @useremail = 'IEPC-SMIT@indoglobus.com',
-                    @FormCode = 'IEPC-TKCCDOA'"
+                    @clientId = '{clientId}',
+                    @useremail = '{username}',
+                    @FormCode = '{formCode}'"
             },
 
-            { "TK CMLs",
-                @"exec dbo.SP_FormDataIEPCTKCMLChildofComponent 
+            {
+                "TK CMLs",
+                (clientId, username, formCode) => $@"
+                    exec dbo.SP_FormDataIEPCTKCMLChildofComponent 
                     @type = 'selectForGrid', 
                     @fdate = null, 
                     @tdate = null,  
@@ -935,13 +1005,15 @@ namespace WebAPI.Infrastructure.Repositories
                     @ToNumber = 10,  
                     @SQLSortString = '',  
                     @SQLFilterString = '',
-                    @clientId = 'IEPC-SMIT',
-                    @useremail = 'IEPC-SMIT@indoglobus.com',
-                    @FormCode = 'IEPC-TKCMLCOC'"
+                    @clientId = '{clientId}',
+                    @useremail = '{username}',
+                    @FormCode = '{formCode}'"
             },
 
-            { "TK CML Readings",
-                @"exec dbo.SP_formdataIEPCTKCMLReadingsChildofCML 
+            {
+                "TK CML Readings",
+                (clientId, username, formCode) => $@"
+                    exec dbo.SP_formdataIEPCTKCMLReadingsChildofCML 
                     @type = 'selectForGrid', 
                     @fdate = null, 
                     @tdate = null,  
@@ -949,205 +1021,258 @@ namespace WebAPI.Infrastructure.Repositories
                     @ToNumber = 10,  
                     @SQLSortString = '',  
                     @SQLFilterString = '',
-                    @clientId = 'IEPC-SMIT',
-                    @useremail = 'IEPC-SMIT@indoglobus.com',
-                    @FormCode = 'IEPC-TKCMLRCOCML'"
+                    @clientId = '{clientId}',
+                    @useremail = '{username}',
+                    @FormCode = '{formCode}'"
             },
+
 
              //PRD Source Data -------------------------------------------------------------
 
-            { "PRD Inventory",
-                @"exec dbo.SP_formdataIEPCPRDInventoryAssetLevelAddEditReport 
-                    @type = 'selectForGrid', 
-                    @fdate = null, 
-                    @tdate = null,  
-                    @FromNumber = 1,  
-                    @ToNumber = 10,  
-                    @SQLSortString = '',  
-                    @SQLFilterString = '',
-                    @clientId = 'IEPC-SMIT',
-                    @username = 'IEPC-SMIT@indoglobus.com',
-                    @FormCode = 'IEPC-PRDINVEAL'"
+            {
+                "PRD Inventory",
+                (clientId, username, formCode) => $@"
+                    exec dbo.SP_formdataIEPCPRDInventoryAssetLevelAddEditReport 
+                        @type = 'selectForGrid', 
+                        @fdate = null, 
+                        @tdate = null,  
+                        @FromNumber = 1,  
+                        @ToNumber = 10,  
+                        @SQLSortString = '',  
+                        @SQLFilterString = '',
+                        @clientId = '{clientId}',
+                        @username = '{username}',
+                        @FormCode = '{formCode}'"
             },
 
-            { "PRD Options",
-                @"exec dbo.SP_FormDataIEPCPRDOptionsAssetLevel 
-                    @type = 'selectForGrid', 
-                    @fdate = null, 
-                    @tdate = null,  
-                    @FromNumber = 1,  
-                    @ToNumber = 10,  
-                    @SQLSortString = '',  
-                    @SQLFilterString = '',
-                    @clientId = 'IEPC-SMIT',
-                    @useremail = 'IEPC-SMIT@indoglobus.com',
-                    @FormCode = 'IEPC-PRDOA'"
+            {
+                "PRD Options",
+                (clientId, username, formCode) => $@"
+                    exec dbo.SP_FormDataIEPCPRDOptionsAssetLevel 
+                        @type = 'selectForGrid', 
+                        @fdate = null, 
+                        @tdate = null,  
+                        @FromNumber = 1,  
+                        @ToNumber = 10,  
+                        @SQLSortString = '',  
+                        @SQLFilterString = '',
+                        @clientId = '{clientId}',
+                        @useremail = '{username}',
+                        @FormCode = '{formCode}'"
             },
 
-            { "PRD Inspections",
-                @"exec dbo.SP_formdataIEPCPRDInspectionsChildOfAsset 
-                    @type = 'selectForGrid', 
-                    @fdate = null, 
-                    @tdate = null,  
-                    @FromNumber = 1,  
-                    @ToNumber = 10,  
-                    @SQLSortString = '',  
-                    @SQLFilterString = '',
-                    @clientId = 'IEPC-SMIT',
-                    @useremail = 'IEPC-SMIT@indoglobus.com',
-                    @FormCode = 'IEPC-PRDINSPCD'"
+            {
+                "PRD Inspections",
+                (clientId, username, formCode) => $@"
+                    exec dbo.SP_formdataIEPCPRDInspectionsChildOfAsset 
+                        @type = 'selectForGrid', 
+                        @fdate = null, 
+                        @tdate = null,  
+                        @FromNumber = 1,  
+                        @ToNumber = 10,  
+                        @SQLSortString = '',  
+                        @SQLFilterString = '',
+                        @clientId = '{clientId}',
+                        @useremail = '{username}',
+                        @FormCode = '{formCode}'"
             },
 
-            { "PRD Notes & Findings",
-                @"exec dbo.SP_FormDataIEPCPRDNotesOrFindingsChildofAsset 
-                    @type = 'selectForGrid', 
-                    @fdate = null, 
-                    @tdate = null,  
-                    @FromNumber = 1,  
-                    @ToNumber = 10,  
-                    @SQLSortString = '',  
-                    @SQLFilterString = '',
-                    @clientId = 'IEPC-SMIT',
-                    @useremail = 'IEPC-SMIT@indoglobus.com',
-                    @FormCode = 'IEPC-PRDNFCOA'"
+            {
+                "PRD Notes & Findings",
+                (clientId, username, formCode) => $@"
+                    exec dbo.SP_FormDataIEPCPRDNotesOrFindingsChildofAsset 
+                        @type = 'selectForGrid', 
+                        @fdate = null, 
+                        @tdate = null,  
+                        @FromNumber = 1,  
+                        @ToNumber = 10,  
+                        @SQLSortString = '',  
+                        @SQLFilterString = '',
+                        @clientId = '{clientId}',
+                        @useremail = '{username}',
+                        @FormCode = '{formCode}'"
             },
 
 
              //Attachments -------------------------------------------------------------
 
-            { "Facility Attachments",
-                @"exec dbo.SP_formDataIEPCFacilityAttachments 
-                    @type = 'SelectRecordsByFacility', 
-                    @fdate = null, 
-                    @tdate = null,  
-                    @FromNumber = 1,  
-                    @ToNumber = 10,  
-                    @SQLSortString = '',  
-                    @SQLFilterString = '', 
-                    @value1 = '0', 
-                    @clientId = 'IEPC-SMIT', 
-                    @value2 = '0'"
+            {
+                "Facility Attachments",
+                (clientId, username, formCode) => $@"
+                    exec dbo.SP_formDataIEPCFacilityAttachments 
+                        @type = 'SelectRecordsByFacility', 
+                        @fdate = null, 
+                        @tdate = null,  
+                        @FromNumber = 1,  
+                        @ToNumber = 10,  
+                        @SQLSortString = '',  
+                        @SQLFilterString = '', 
+                        @value1 = '0', 
+                        @clientId = '{clientId}', 
+                        @value2 = '0'"
             },
 
-            { "PV Attachments",
-                @"exec dbo.SP_formDataPVAttachmentsChildofAsset_v2 
-                    @value1 = 'selectByAssetIdentifierAndAttachmentType',
-                    @clientId = 'IEPC-SMIT',
-                    @value2 = '0',
-                    @value3 = '0', 
-                    @FromNumber = 1, 
-                    @ToNumber = 10, 
-                    @SQLSortString = '', 
-                    @SQLFilterString = ''"
+            {
+                "PV Attachments",
+                (clientId, username, formCode) => $@"
+                    exec dbo.SP_formDataPVAttachmentsChildofAsset_v2 
+                        @value1 = 'selectByAssetIdentifierAndAttachmentType',
+                        @clientId = '{clientId}',
+                        @value2 = '0',
+                        @value3 = '0', 
+                        @FromNumber = 1, 
+                        @ToNumber = 10, 
+                        @SQLSortString = '', 
+                        @SQLFilterString = ''"
             },
 
-            { "PP Attachments",
-                @"exec dbo.SP_formDataPPAttachmentsChildofAsset_v2 
-                    @value1 = 'selectByAssetIdentifierAndAttachmentType',
-                    @clientId = 'IEPC-SMIT',
-                    @value2 = '0',
-                    @value3 = '0', 
-                    @FromNumber = 1,   
-                    @ToNumber = 10, 
-                    @SQLSortString = '', 
-                    @SQLFilterString = ''"
+            {
+                "PP Attachments",
+                (clientId, username, formCode) => $@"
+                    exec dbo.SP_formDataPPAttachmentsChildofAsset_v2 
+                        @value1 = 'selectByAssetIdentifierAndAttachmentType',
+                        @clientId = '{clientId}',
+                        @value2 = '0',
+                        @value3 = '0', 
+                        @FromNumber = 1,   
+                        @ToNumber = 10, 
+                        @SQLSortString = '', 
+                        @SQLFilterString = ''"
             },
 
-            { "PRD Attachments",
-                @"exec dbo.SP_formDataPRDAttachments 
-                    @type = 'selectByAssetIdentifierAndAttachmentType',  
-                    @FromNumber = 1,  
-                    @ToNumber = 10,  
-                    @SQLSortString = '',  
-                    @SQLFilterString = '', 
-                    @value2 = '0', 
-                    @value3 = '0', 
-                    @clientId = 'IEPC-SMIT'"
+            {
+                "PRD Attachments",
+                (clientId, username, formCode) => $@"
+                    exec dbo.SP_formDataPRDAttachments 
+                        @type = 'selectByAssetIdentifierAndAttachmentType',  
+                        @FromNumber = 1,  
+                        @ToNumber = 10,  
+                        @SQLSortString = '',  
+                        @SQLFilterString = '', 
+                        @value2 = '0', 
+                        @value3 = '0', 
+                        @clientId = '{clientId}'"
             },
 
-            { "TK Attachments",
-                @"exec dbo.SP_formDataTKAttachmentsChildofAsset_v2 
-                    @value1 = 'selectByAssetIdentifierAndAttachmentType',
-                    @clientId = 'IEPC-SMIT',
-                    @value2 = '0',
-                    @value3 = '0', 
-                    @FromNumber = 1,   
-                    @ToNumber = 10, 
-                    @SQLSortString = '', 
-                    @SQLFilterString = ''"
+            {
+                "TK Attachments",
+                (clientId, username, formCode) => $@"
+                    exec dbo.SP_formDataTKAttachmentsChildofAsset_v2 
+                        @value1 = 'selectByAssetIdentifierAndAttachmentType',
+                        @clientId = '{clientId}',
+                        @value2 = '0',
+                        @value3 = '0', 
+                        @FromNumber = 1,   
+                        @ToNumber = 10, 
+                        @SQLSortString = '', 
+                        @SQLFilterString = ''"
             },
 
-            { "Attachments Report",
-                @"exec dbo.SP_FormDataIEPCAttachmentsReport_v2 
-                    @AssetType = 1001,  
-                    @FromNumber = 1,  
-                    @ToNumber = 10,  
-                    @SQLSortString = '',  
-                    @SQLFilterString = ''"
+            {
+                "Attachments Report",
+                (clientId, username, formCode) => $@"
+                    exec dbo.SP_FormDataIEPCAttachmentsReport_v2 
+                        @AssetType = 1001,  
+                        @FromNumber = 1,  
+                        @ToNumber = 10,  
+                        @SQLSortString = '',  
+                        @SQLFilterString = ''"
             },
+
 
 
              //Configurations -------------------------------------------------------------
 
-            { "System Dropdown",
-                @"exec dbo.SP_FormDataIEPCSystem 
-                    @type = 'selectForGrid', 
-                    @fdate = null, 
-                    @tdate = null,  
-                    @FromNumber = 1,  
-                    @ToNumber = 10,  
-                    @SQLSortString = '',  
-                    @SQLFilterString = '',
-                    @clientId = 'IEPC-SMIT',
-                    @useremail = 'IEPC-SMIT@indoglobus.com',
-                    @FormCode = 'IEPC-SYS'"
+            {
+                "System Dropdown",
+                (clientId, username, formCode) => $@"
+                    exec dbo.SP_FormDataIEPCSystem 
+                        @type = 'selectForGrid', 
+                        @fdate = null, 
+                        @tdate = null,  
+                        @FromNumber = 1,  
+                        @ToNumber = 10,  
+                        @SQLSortString = '',  
+                        @SQLFilterString = '',
+                        @clientId = '{clientId}',
+                        @useremail = '{username}',
+                        @FormCode = '{formCode}'"
             },
 
-            { "PV Material Reference",
-                @"exec dbo.SP_FormDataIEPCMaterialAllowableStressLookupNew 
-                    @type = 'selectForGrid', 
-                    @fdate = null, 
-                    @tdate = null,  
-                    @FromNumber = 1,  
-                    @ToNumber = 10,  
-                    @SQLSortString = '',  
-                    @SQLFilterString = ''"
+            {
+                "PV Material Reference",
+                (clientId, username, formCode) => $@"
+                    exec dbo.SP_FormDataIEPCMaterialAllowableStressLookupNew 
+                        @type = 'selectForGrid', 
+                        @fdate = null, 
+                        @tdate = null,  
+                        @FromNumber = 1,  
+                        @ToNumber = 10,  
+                        @SQLSortString = '',  
+                        @SQLFilterString = ''"
             },
 
-            { "PP Material Reference",
-                @"exec dbo.SP_FormDataIEPCPPMaterialAllowableStressLookupNew 
-                    @type = 'selectForGrid', 
-                    @fdate = null, 
-                    @tdate = null,  
-                    @FromNumber = 1,  
-                    @ToNumber = 10,  
-                    @SQLSortString = '',  
-                    @SQLFilterString = ''"
+            {
+                "PP Material Reference",
+                (clientId, username, formCode) => $@"
+                    exec dbo.SP_FormDataIEPCPPMaterialAllowableStressLookupNew 
+                        @type = 'selectForGrid', 
+                        @fdate = null, 
+                        @tdate = null,  
+                        @FromNumber = 1,  
+                        @ToNumber = 10,  
+                        @SQLSortString = '',  
+                        @SQLFilterString = ''"
             },
 
-            { "TK Material Reference",
-                @"exec dbo.SP_FormDataIEPCTKMaterialAllowableStressLookupNew 
-                    @type = 'selectForGrid', 
-                    @fdate = null, 
-                    @tdate = null,  
-                    @FromNumber = 1,  
-                    @ToNumber = 10,  
-                    @SQLSortString = '',  
-                    @SQLFilterString = ''"
+            {
+                "TK Material Reference",
+                (clientId, username, formCode) => $@"
+                    exec dbo.SP_FormDataIEPCTKMaterialAllowableStressLookupNew 
+                        @type = 'selectForGrid', 
+                        @fdate = null, 
+                        @tdate = null,  
+                        @FromNumber = 1,  
+                        @ToNumber = 10,  
+                        @SQLSortString = '',  
+                        @SQLFilterString = ''"
             },
+
 
             //Bulk Update -------------------------------------------------------------
 
             { "Bulk Update",
-                @"exec "
+                 (clientId, username, formCode) => $@"exec "
             },
 
             //Bulk Import -------------------------------------------------------------
 
             { "Upload Data From Excel",
-                @"exec "
+                (clientId, username, formCode) => $@"exec "
             },
         };
+
+        private static string GetFormCodeByReportName(string reportName)
+        {
+            return reportName switch
+            {
+                "PV Audit Report" => "IEPC-PVINVEAL",
+                "PV CML Audit Report" => "IEPC-PVCML",
+                "PV Scheduler Report" => "IEPC-PVSCHED",
+                "PV Findings Report" => "IEPC-PVFIN",
+                "PP Audit Report" => "IEPC-PPAUDIT",
+                "PP CML Audit Report" => "IEPC-PPCML",
+                "PP Scheduler Report" => "IEPC-PPSCHED",
+                "PP Findings Report" => "IEPC-PPFIN",
+                "TK Audit Report" => "IEPC-TKAUDIT",
+                "TK CML Audit Report" => "IEPC-TKCML",
+                "TK Scheduler Report" => "IEPC-TKSCHED",
+                "TK Findings Report" => "IEPC-TKFIN",
+                "PRD Audit Report" => "IEPC-PRDAUDIT",
+                "PRD Findings Report" => "IEPC-PRDFIN",
+                _ => "IEPC-UNKNOWN"
+            };
+        }
 
     }
 }
