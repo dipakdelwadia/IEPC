@@ -72,7 +72,8 @@ namespace WebAPI.Infrastructure.Repositories
                 var ds = await _dbService.ExecuteRawSqlWithClientId(sqlText, clientId);
 
                 // FIXED DOWNLOAD PATH
-                string outputDir = @"C:\Download";
+                string outputDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Download");
+
                 if (!Directory.Exists(outputDir))
                     Directory.CreateDirectory(outputDir);
 
