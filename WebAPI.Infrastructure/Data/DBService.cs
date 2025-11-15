@@ -1,10 +1,17 @@
 ﻿using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Data;
 
 namespace WebAPI.Infrastructure.Repositories
 {
+    public class JsonResultWithCount
+    {
+        public string Json { get; set; } = string.Empty;
+        public int TableCount { get; set; }
+    }
+
     public class DBService
     {
         private readonly IConfiguration _configuration;
@@ -65,7 +72,7 @@ namespace WebAPI.Infrastructure.Repositories
                     {
                         var value = prop.GetValue(parameters);
 
-                        // ✅ Convert JObject or JArray to JSON string
+                        
                         if (value is JObject jObject)
                             value = jObject.ToString();
                         else if (value is JArray jArray)
@@ -133,7 +140,6 @@ namespace WebAPI.Infrastructure.Repositories
                     {
                         var value = prop.GetValue(parameters);
 
-                        // ✅ Convert JObject or JArray to JSON string
                         if (value is JObject jObject)
                             value = jObject.ToString();
                         else if (value is JArray jArray)

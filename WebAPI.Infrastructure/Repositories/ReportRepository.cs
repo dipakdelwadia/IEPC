@@ -1,4 +1,4 @@
-using Azure;
+﻿using Azure;
 using Dapper;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -56,24 +56,42 @@ namespace WebAPI.Infrastructure.Repositories
             return (response);
         }
 
-        public async Task<ReportResponse<JObject>> GetReportData(ReportRequests request)
+        public async Task<ReportResponse<string>> GetReportData(ReportRequests request)
         {
-            var response = new ReportResponse<JObject>();
+            var response = new ReportResponse<string>();
 
             try
             {
-                string clientId = "IEPC-SMIT"; //request.ClientId;
+                string clientId = request.ClientId;
                 string username = "IEPC-SMIT@indoglobus.com";
                 string formCode = GetFormCodeByReportName(request.ReportName);
 
                 string sqlText = _reportSqlMapping[request.ReportName](clientId, username, formCode);
 
+                // Query DB
                 var ds = await _dbService.ExecuteRawSqlWithClientId(sqlText, clientId);
 
-                string json = JsonConvert.SerializeObject(ds);
+                // FIXED DOWNLOAD PATH
+                string outputDir = @"C:\Download";
+                if (!Directory.Exists(outputDir))
+                    Directory.CreateDirectory(outputDir);
+
+                string filePath = Path.Combine(outputDir, "IEPCReport.json");
+
+                // Write JSON to file
+                using (var fs = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))
+                using (var sw = new StreamWriter(fs))
+                using (var writer = new JsonTextWriter(sw))
+                {
+                    writer.Formatting = Formatting.None;
+                    JsonSerializer serializer = new JsonSerializer();
+                    serializer.Serialize(writer, ds);
+                }
+
+                response.Payload = filePath.Replace("\\", "/");
                 response.Status = "Success";
-                response.Payload = JObject.Parse(json);
                 response.PayloadCount = ds.Tables.Count;
+                response.Message = "Json file successfully created at C:/Download/IEPCReport.json";
             }
             catch (Exception ex)
             {
