@@ -11,7 +11,7 @@ namespace WebAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    //[Authorize] // Requires JWT token
+    [Authorize] // Requires JWT token
     public class ReportController : ControllerBase
     {
         private readonly IReportRepository _reportRepository;
