@@ -15,9 +15,12 @@ namespace WebAPI.Controllers
     public class ReportController : ControllerBase
     {
         private readonly IReportRepository _reportRepository;
-        public ReportController(IReportRepository reportRepository)
+        private readonly TokenReaderService _tokenReader;
+
+        public ReportController(IReportRepository reportRepository, TokenReaderService tokenReader)
         {
             _reportRepository = reportRepository;
+            _tokenReader = tokenReader;
         }
 
         [HttpPost("get")]
@@ -30,7 +33,8 @@ namespace WebAPI.Controllers
         [HttpPost("GetReport")]
         public async Task<IActionResult> GetReport([FromBody] ReportRequests request)
         {
-            var result = await _reportRepository.GetReportData(request);
+            string userId = _tokenReader.GetUserId();
+            var result = await _reportRepository.GetReportData(request, userId);
             if (result.Status != "Success")
             {
                 return BadRequest(result.Message ?? "Unknown error occurred.");

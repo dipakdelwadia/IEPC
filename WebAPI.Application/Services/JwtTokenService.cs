@@ -1,9 +1,11 @@
 ﻿using WebAPI.Domain.Entities;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using Microsoft.IdentityModel.JsonWebTokens;
 using System.Text;
+using Microsoft.AspNetCore.Http;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace WebAPI.Application.Services
 {
@@ -20,8 +22,8 @@ namespace WebAPI.Application.Services
         {
             var claims = new[]
             {
-                new Claim(JwtRegisteredClaimNames.Sub, user.UserID),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                new Claim(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub, user.UserID),
+                new Claim(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                 new Claim(ClaimTypes.NameIdentifier, user.ClientId.ToString())
             };
 
@@ -37,6 +39,25 @@ namespace WebAPI.Application.Services
             );
 
             return new JwtSecurityTokenHandler().WriteToken(token);
+        }
+
+
+    }
+    public class TokenReaderService
+    {
+        private readonly IHttpContextAccessor _httpContextAccessor;
+
+        public TokenReaderService(IHttpContextAccessor httpContextAccessor)
+        {
+            _httpContextAccessor = httpContextAccessor;
+        }
+
+        // Method to read UserId from JWT token
+        public string? GetUserId()
+        {
+            var user = _httpContextAccessor.HttpContext?.User;
+
+            return user?.Claims.FirstOrDefault()?.Value;
         }
     }
 }

@@ -22,6 +22,8 @@ builder.Services.AddSingleton<IDbConnection>(sp =>
 
 builder.Services.AddControllers().AddNewtonsoftJson();
 builder.Services.AddScoped<JwtTokenService>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<TokenReaderService>();
 builder.Services.AddScoped<DBService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IReportRepository, ReportRepository>();

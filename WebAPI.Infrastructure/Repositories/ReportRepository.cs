@@ -5,15 +5,19 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using WebAPI.Domain.Entities;
 using WebAPI.RequestResponse;
+using System.Security.Claims;
+
 
 namespace WebAPI.Infrastructure.Repositories
 {
+
     public class ReportRepository : IReportRepository
     {
         //private readonly AppDbContext _context;
@@ -56,14 +60,15 @@ namespace WebAPI.Infrastructure.Repositories
             return (response);
         }
 
-        public async Task<ReportResponse<string>> GetReportData(ReportRequests request)
+        public async Task<ReportResponse<string>> GetReportData(ReportRequests request, string userId)
         {
             var response = new ReportResponse<string>();
 
             try
             {
-                string clientId = request.ClientId;
-                string username = "IEPC-SMIT@indoglobus.com";
+                //var userId = User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+                string clientId = "IEPC-"+request.ClientId;
+                string username = userId;// GetUserNamebyClientId(request.ClientId); //"IEPC-SMIT@indoglobus.com";
                 string formCode = GetFormCodeByReportName(request.ReportName);
 
                 string sqlText = _reportSqlMapping[request.ReportName](clientId, username, formCode);
@@ -92,7 +97,7 @@ namespace WebAPI.Infrastructure.Repositories
                 response.Payload = filePath.Replace("\\", "/");
                 response.Status = "Success";
                 response.PayloadCount = ds.Tables.Count;
-                response.Message = "Json file successfully created at C:/Download/IEPCReport.json";
+                response.Message = "Json file successfully created";
             }
             catch (Exception ex)
             {
@@ -1292,6 +1297,6 @@ namespace WebAPI.Infrastructure.Repositories
                 _ => "IEPC-UNKNOWN"
             };
         }
-
+       
     }
 }

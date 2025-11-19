@@ -7,7 +7,7 @@ namespace WebAPI.Infrastructure.Repositories
     public interface IReportRepository
     {
         Task<ReportResponse<JObject>> GetReport(ReportRequest request);
-        Task<ReportResponse<string>> GetReportData(ReportRequests request);
+        Task<ReportResponse<string>> GetReportData(ReportRequests request, string userId);
         //void Add(User user);
     }
 }

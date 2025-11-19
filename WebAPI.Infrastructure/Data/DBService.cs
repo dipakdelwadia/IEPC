@@ -23,41 +23,7 @@ namespace WebAPI.Infrastructure.Repositories
 
         public async Task<DataSet> ExecuteStoredProcedureAsync(string spName, object parameters)
         {
-            //string clientId = parameters?
-            //    .GetType()
-            //    .GetProperty("ClientId")?
-            //    .GetValue(parameters)?
-            //    .ToString() ?? string.Empty;
-
             string connectionStringKey = "ConnectionStrings:DefaultConnection";
-
-            //switch (clientId)
-            //{
-            //    case "CERS":
-            //        connectionStringKey = "ConnectionStrings:CERS";
-            //        break;
-            //    case "HFSI":
-            //        connectionStringKey = "ConnectionStrings:HFSI";
-            //        break;
-            //    case "CRTN":
-            //        connectionStringKey = "ConnectionStrings:CRTN";
-            //        break;
-            //    case "MTDR":
-            //        connectionStringKey = "ConnectionStrings:MTDR";
-            //        break;
-            //    case "SMIT":
-            //        connectionStringKey = "ConnectionStrings:SMIT";
-            //        break;
-            //    case "PDCE":
-            //        connectionStringKey = "ConnectionStrings:PDCE";
-            //        break;
-            //    case "FUJI":
-            //        connectionStringKey = "ConnectionStrings:FUJI";
-            //        break;
-            //    default:
-            //        connectionStringKey = "ConnectionStrings:DefaultConnection";
-            //        break;
-            //}
 
             using (var connection = new SqlConnection(_configuration[connectionStringKey]))
             using (var cmd = new SqlCommand(spName, connection))
@@ -97,35 +63,17 @@ namespace WebAPI.Infrastructure.Repositories
                 .GetValue(parameters)?
                 .ToString() ?? string.Empty;
 
-            string connectionStringKey = "ConnectionStrings:DefaultConnection";
-
-            switch (clientId)
+            string connectionStringKey = clientId switch
             {
-                case "CERS":
-                    connectionStringKey = "ConnectionStrings:CERS";
-                    break;
-                case "HFSI":
-                    connectionStringKey = "ConnectionStrings:HFSI";
-                    break;
-                case "CRTN":
-                    connectionStringKey = "ConnectionStrings:CRTN";
-                    break;
-                case "MTDR":
-                    connectionStringKey = "ConnectionStrings:MTDR";
-                    break;
-                case "SMIT":
-                    connectionStringKey = "ConnectionStrings:SMIT";
-                    break;
-                case "PDCE":
-                    connectionStringKey = "ConnectionStrings:PDCE";
-                    break;
-                case "FUJI":
-                    connectionStringKey = "ConnectionStrings:FUJI";
-                    break;
-                default:
-                    connectionStringKey = "ConnectionStrings:DefaultConnection";
-                    break;
-            }
+                "CERS" => "ConnectionStrings:IEPC-CERS",
+                "HFSI" => "ConnectionStrings:IEPC-HFSI",
+                "CRTN" => "ConnectionStrings:IEPC-CRTN",
+                "MTDR" => "ConnectionStrings:IEPC-MTDR",
+                "SMIT" => "ConnectionStrings:IEPC-SMIT",
+                "PDCE" => "ConnectionStrings:IEPC-PDCE",
+                "FUJI" => "ConnectionStrings:IEPC-FUJI",
+                _ => "ConnectionStrings:DefaultConnection"
+            };
 
             using (var connection = new SqlConnection(_configuration[connectionStringKey]))
             using (var cmd = new SqlCommand(spName, connection))
@@ -160,13 +108,13 @@ namespace WebAPI.Infrastructure.Repositories
         {
             string connectionStringKey = clientId switch
             {
-                "CERS" => "ConnectionStrings:CERS",
-                "HFSI" => "ConnectionStrings:HFSI",
-                "CRTN" => "ConnectionStrings:CRTN",
-                "MTDR" => "ConnectionStrings:MTDR",
-                "SMIT" => "ConnectionStrings:SMIT",
-                "PDCE" => "ConnectionStrings:PDCE",
-                "FUJI" => "ConnectionStrings:FUJI",
+                "IEPC-CERS" => "ConnectionStrings:IEPC-CERS",
+                "IEPC-HFSI" => "ConnectionStrings:IEPC-HFSI",
+                "IEPC-CRTN" => "ConnectionStrings:IEPC-CRTN",
+                "IEPC-MTDR" => "ConnectionStrings:IEPC-MTDR",
+                "IEPC-SMIT" => "ConnectionStrings:IEPC-SMIT",
+                "IEPC-PDCE" => "ConnectionStrings:IEPC-PDCE",
+                "IEPC-FUJI" => "ConnectionStrings:IEPC-FUJI",
                 _ => "ConnectionStrings:DefaultConnection"
             };
 
@@ -175,6 +123,7 @@ namespace WebAPI.Infrastructure.Repositories
             using var adapter = new SqlDataAdapter(cmd);
 
             cmd.CommandType = CommandType.Text;
+            cmd.CommandTimeout = 0;
 
             var ds = new DataSet();
             await connection.OpenAsync();
