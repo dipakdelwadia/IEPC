@@ -1,4 +1,4 @@
-﻿using Azure;
+using Azure;
 using Dapper;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -146,22 +146,26 @@ namespace WebAPI.Infrastructure.Repositories
 
             // Audit Reports -------------------------------------------------------------
             { "PV Audit Report",
-                (clientId, username, formCode) => $@"
-                exec dbo.SP_IEPCAssetCMLAlgoParentChild_V4 
-                @type = 'Select', 
-                @fdate = null, 
-                @tdate = null, 
-                @FromNumber = 1,  
-                @ToNumber = 100000,  
-                @SQLSortString = '', 
-                @SQLFilterString = '',
-                @username = '{username}',
-                @clientId = '{clientId}',
-                @FormCode = '{formCode}',
-                @value8 = '',
-                @Id = '',
-                @IsRefresh = 0"
+                (clientId, username, formCode) => $@"exec dbo.SP_IEPCAssetCMLAlgoParentChild_V4_PowerBI"
             },
+
+            //{ "PV Audit Report",
+            //    (clientId, username, formCode) => $@"
+            //    exec dbo.SP_IEPCAssetCMLAlgoParentChild_V4 
+            //    @type = 'Select', 
+            //    @fdate = null, 
+            //    @tdate = null, 
+            //    @FromNumber = 1,  
+            //    @ToNumber = 100000,  
+            //    @SQLSortString = '', 
+            //    @SQLFilterString = '',
+            //    @username = '{username}',
+            //    @clientId = '{clientId}',
+            //    @FormCode = '{formCode}',
+            //    @value8 = '',
+            //    @Id = '',
+            //    @IsRefresh = 0"
+            //},
 
             { "PV CML Audit Report",
                 (clientId, username, formCode) => $@"
