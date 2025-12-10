@@ -76,6 +76,22 @@ namespace WebAPI.Infrastructure.Repositories
                 // Query DB
                 var ds = await _dbService.ExecuteRawSqlWithClientId(sqlText, clientId);
 
+                // Add NULL-row to each empty table
+                foreach (DataTable table in ds.Tables)
+                {
+                    if (table.Rows.Count == 0)
+                    {
+                        DataRow nullRow = table.NewRow();
+
+                        foreach (DataColumn col in table.Columns)
+                        {
+                            nullRow[col] = DBNull.Value;
+                        }
+
+                        table.Rows.Add(nullRow);
+                    }
+                }
+
                 // FIXED DOWNLOAD PATH
                 string outputDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Download");
 
