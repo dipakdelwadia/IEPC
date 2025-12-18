@@ -199,6 +199,24 @@ namespace WebAPI.Infrastructure.Repositories
                 @IsRefresh = 0"
             },
 
+            { "PV Task Report",
+                (clientId, username, formCode) => $@"
+                exec dbo.SP_IEPCPVTaskReportCalculation 
+                @type = 'Select', 
+                @fdate = null, 
+                @tdate = null, 
+                @FromNumber = 1,  
+                @ToNumber = 1000000,  
+                @SQLSortString = '', 
+                @SQLFilterString = '',
+                @username = '{username}',
+                @clientId = '{clientId}',
+                @FormCode = '{formCode}',
+                @value8 = '',
+                @Id = '',
+                @IsRefresh = 0"
+            },
+
             { "PV Scheduler Report",
                 (clientId, username, formCode) => $@"
                 exec dbo.SP_IEPCPVSchedulerReport_v4 
@@ -228,7 +246,7 @@ namespace WebAPI.Infrastructure.Repositories
                 @clientId = '{clientId}',
                 @useremail = '{username}',
                 @FormCode = '{formCode}',
-                @IsRefresh = 1"
+                @IsRefresh = 0"
             },
 
             { "PP Audit Report",
@@ -262,6 +280,24 @@ namespace WebAPI.Infrastructure.Repositories
                 @clientId = '{clientId}',
                 @username = '{username}',
                 @FormCode = '{formCode}',
+                @IsRefresh = 0"
+            },
+
+            { "PP Task Report",
+                (clientId, username, formCode) => $@"
+                exec dbo.SP_IEPCPPTaskReportCalculation 
+                @type = 'Select', 
+                @fdate = null, 
+                @tdate = null, 
+                @FromNumber = 1,  
+                @ToNumber = 1000000,  
+                @SQLSortString = '', 
+                @SQLFilterString = '',
+                @username = '{username}',
+                @clientId = '{clientId}',
+                @FormCode = '{formCode}',
+                @value8 = '',
+                @Id = '',
                 @IsRefresh = 0"
             },
 
@@ -331,6 +367,24 @@ namespace WebAPI.Infrastructure.Repositories
                 @IsRefresh = 0"
             },
 
+            { "TK Task Report",
+                (clientId, username, formCode) => $@"
+                exec dbo.SP_IEPCTKTaskReportCalculation 
+                @type = 'Select', 
+                @fdate = null, 
+                @tdate = null, 
+                @FromNumber = 1,  
+                @ToNumber = 1000000,  
+                @SQLSortString = '', 
+                @SQLFilterString = '',
+                @username = '{username}',
+                @clientId = '{clientId}',
+                @FormCode = '{formCode}',
+                @value8 = '',
+                @Id = '',
+                @IsRefresh = 0"
+            },
+
             { "TK Scheduler Report",
                 (clientId, username, formCode) => $@"
                 exec dbo.SP_IEPCTKSchedulerReport_v4 
@@ -380,6 +434,23 @@ namespace WebAPI.Infrastructure.Repositories
                 @IsRefresh = 0"
             },
 
+            { "PRD Task Report",
+                (clientId, username, formCode) => $@"
+                exec dbo.SP_IEPCPRDTaskReportCalculation 
+                @type = 'Select', 
+                @fdate = null, 
+                @tdate = null, 
+                @FromNumber = 1,  
+                @ToNumber = 1000000,  
+                @SQLSortString = '', 
+                @SQLFilterString = '',
+                @username = '{username}',
+                @clientId = '{clientId}',
+                @FormCode = '{formCode}',
+                @value8 = '',
+                @Id = '',
+                @IsRefresh = 0"
+            },
             { "PRD Findings Report",
                 (clientId, username, formCode) => $@"
                 exec dbo.Sp_IEPCPRDNotesAndFindingAuditReport_v4 
@@ -544,7 +615,7 @@ namespace WebAPI.Infrastructure.Repositories
                     @clientId = '{clientId}',
                     @useremail = '{username}',
                     @FormCode = '{formCode}',
-                    @IsRefresh = 1"
+                    @IsRefresh = 0"
             },
 
 
@@ -741,9 +812,9 @@ namespace WebAPI.Infrastructure.Repositories
                     @FormCode = '{formCode}'"
             },
 
-            { "PV CML Readings(Multi-Edit)",
-                 (clientId, username, formCode) => $@"exec "
-            },
+            //{ "PV CML Readings(Multi-Edit)",
+            //     (clientId, username, formCode) => $@"exec "
+            //},
 
             //PP Source Data -------------------------------------------------------------
 
@@ -1285,15 +1356,15 @@ namespace WebAPI.Infrastructure.Repositories
 
             //Bulk Update -------------------------------------------------------------
 
-            { "Bulk Update",
-                 (clientId, username, formCode) => $@"exec "
-            },
+            //{ "Bulk Update",
+            //     (clientId, username, formCode) => $@"exec "
+            //},
 
-            //Bulk Import -------------------------------------------------------------
+            ////Bulk Import -------------------------------------------------------------
 
-            { "Upload Data From Excel",
-                (clientId, username, formCode) => $@"exec "
-            },
+            //{ "Upload Data From Excel",
+            //    (clientId, username, formCode) => $@"exec "
+            //},
         };
 
         private static string GetFormCodeByReportName(string reportName)
@@ -1306,6 +1377,10 @@ namespace WebAPI.Infrastructure.Repositories
                 "PV Audit Report" => "IEPC-PVINVEAL",
                 "TK Audit Report" => "IEPC-TKINVEAL",
                 "PP Audit Report" => "IEPC-PPINVEAL",
+                "PV Task Report" => "IEPC-PVTASKAUDIT",
+                "PP Task Report" => "IEPC-PPTASKAUDIT",
+                "TK Task Report" => "IEPC-TKTASKAUDIT",
+                "PRD Task Report" => "IEPC-PRDTASKAUDIT",
                 "PV Findings Report" => "IEPC-PVINVEAL",
                 "PP Findings Report" => "IEPC-PPINVEAL",
                 "TK Findings Report" => "IEPC-TKINVEAL",
