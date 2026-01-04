@@ -167,7 +167,7 @@ namespace WebAPI.Infrastructure.Repositories
 
             { "PV Audit Report",
                 (clientId, username, formCode) => $@"
-                exec dbo.SP_IEPCAssetCMLAlgoParentChild_V4 
+                exec dbo.SP_IEPCAssetCMLAlgoParentChild_V4_PowerBI 
                 @type = 'Select', 
                 @fdate = null, 
                 @tdate = null, 
